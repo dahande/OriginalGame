@@ -29,13 +29,25 @@
     </div>
   </header>
 
+  <div class="mode-badge" id="modeBadge" hidden>
+    <span class="mode-badge-icon" id="modeBadgeIcon">🫧</span>
+    <span class="mode-badge-name" id="modeBadgeName">クラシック</span>
+  </div>
+
   <button class="icon-btn settings-btn" id="settingsBtn" aria-label="設定">
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
       <path fill="currentColor" d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm9.43 4a7.6 7.6 0 0 0-.07-1.05l2.11-1.65-2-3.46-2.49 1a7.6 7.6 0 0 0-1.81-1.05l-.38-2.65h-4l-.38 2.65a7.6 7.6 0 0 0-1.81 1.05l-2.49-1-2 3.46 2.11 1.65A7.6 7.6 0 0 0 4.57 12c0 .36.03.71.07 1.05L2.53 14.7l2 3.46 2.49-1c.55.43 1.16.78 1.81 1.05l.38 2.65h4l.38-2.65c.65-.27 1.26-.62 1.81-1.05l2.49 1 2-3.46-2.11-1.65c.04-.34.07-.69.07-1.05Z"/>
     </svg>
   </button>
 
+  <button class="icon-btn menu-btn" id="menuBtn" aria-label="メニューに 戻る">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path fill="currentColor" d="M3 6h18v2H3V6Zm0 5h18v2H3v-2Zm0 5h18v2H3v-2Z"/>
+    </svg>
+  </button>
+
   <div class="combo-pop" id="comboPop" aria-hidden="true"></div>
+  <div class="rage-pop" id="ragePop" aria-hidden="true"></div>
 
   <div class="overlay" id="startOverlay">
     <div class="panel">
@@ -44,15 +56,32 @@
         <br/>
         <span class="title-sub">SMASH</span>
       </h1>
-      <p class="lead">クリック / タップで バブルを 連続爆破!<br/>
-        ストレスを 吹き飛ばそう。</p>
+      <p class="lead">モードを 選んで 仕事の ストレスを 吹き飛ばそう。</p>
+
+      <div class="mode-grid" role="list">
+        <button class="mode-card" data-mode="classic" role="listitem">
+          <span class="mode-icon" aria-hidden="true">🫧</span>
+          <span class="mode-name">クラシック</span>
+          <span class="mode-desc">難度上昇 + コンボで<br/>ハイスコアを 狙う</span>
+        </button>
+        <button class="mode-card mode-zen" data-mode="zen" role="listitem">
+          <span class="mode-icon" aria-hidden="true">🌿</span>
+          <span class="mode-name">禅</span>
+          <span class="mode-desc">ゆったり 無限プレイ<br/>頭を リセット</span>
+        </button>
+        <button class="mode-card mode-rage" data-mode="rage" role="listitem">
+          <span class="mode-icon" aria-hidden="true">💢</span>
+          <span class="mode-name">仕事ストレス爆破</span>
+          <span class="mode-desc">締切・上司・残業…<br/>全部 粉砕</span>
+        </button>
+      </div>
+
       <ul class="legend">
         <li><span class="dot dot-normal"></span>通常 +10</li>
         <li><span class="dot dot-bomb"></span>ボム 周囲爆破</li>
         <li><span class="dot dot-rainbow"></span>レインボー 全消し</li>
         <li><span class="dot dot-gold"></span>ゴールド +100</li>
       </ul>
-      <button class="btn btn-primary" id="startBtn">スタート</button>
       <p class="footnote">音を有効にすると もっと爽快</p>
     </div>
   </div>
