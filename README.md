@@ -59,6 +59,29 @@ GitHub Pages に デプロイします。
 
 公開後は `https://<user>.github.io/<repo>/` で 遊べます。
 
+### カスタムドメイン ( `popz.io` )
+
+リポジトリ直下の `CNAME` ファイルに ドメインが 入っていれば、GitHub Pages
+は その ドメインで サイトを 公開します。設定手順:
+
+1. **ドメインを 取得** する ( Cloudflare / お名前 .com / Namecheap など、
+   `.io` は 年 $30〜40 が 相場 )。
+2. **DNS レコードを 設定** する。`popz.io` を 頂点 ( apex ) で 使う場合:
+
+   | Type  | Name | Value                  |
+   | ----- | ---- | ---------------------- |
+   | A     | `@`  | `185.199.108.153`      |
+   | A     | `@`  | `185.199.109.153`      |
+   | A     | `@`  | `185.199.110.153`      |
+   | A     | `@`  | `185.199.111.153`      |
+   | CNAME | `www`| `<user>.github.io.`    |
+
+3. リポジトリの **Settings → Pages → Custom domain** に `popz.io` を
+   入力し、`Enforce HTTPS` を ON。
+4. 数分〜数時間で 証明書が 発行され、`https://popz.io/` で アクセス可能に なる。
+
+> 別の ドメインに したい時は `CNAME` の 1 行を 書き換えて push すれば OK。
+
 ---
 
 ## ファイル構成
@@ -66,6 +89,7 @@ GitHub Pages に デプロイします。
 ```
 .
 ├── index.html          # エントリポイント
+├── CNAME               # GitHub Pages 用 カスタムドメイン
 ├── src/
 │   ├── main.js         # 起動 / UI 配線
 │   ├── game.js         # ゲームループ / 描画 / 衝突判定
