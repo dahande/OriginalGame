@@ -5,6 +5,19 @@ export const TYPES = {
   GOLD:    "gold",
 };
 
+export const STRESS_WORDS = [
+  "会議", "締切", "メール", "残業", "報告書", "上司",
+  "満員電車", "月曜日", "クレーム", "資料", "押印",
+  "電話", "Slack", "ミス", "雑用", "バグ", "監査",
+  "請求書", "進捗", "見積もり", "稟議", "面接",
+];
+
+export function pickStressWord() {
+  return STRESS_WORDS[(Math.random() * STRESS_WORDS.length) | 0];
+}
+
+export const RAGE_POPS = ["粉砕!", "撃破!", "破壊!", "KO!", "スカッ!", "ざまみろ!", "解放!"];
+
 const NORMAL_PALETTE = [
   "#ff5fa2", "#ffb347", "#ffd860", "#a4ff5f",
   "#5ad7ff", "#c08bff", "#ff7676", "#7affd1",
@@ -31,6 +44,7 @@ export class Bubble {
     this.vy = opts.vy ?? -60;
     this.type = opts.type ?? TYPES.NORMAL;
     this.color = opts.color ?? NORMAL_PALETTE[(Math.random() * NORMAL_PALETTE.length) | 0];
+    this.label = opts.label ?? null;
     this.age = 0;
     this.wobble = Math.random() * Math.PI * 2;
     this.wobbleSpeed = 1.4 + Math.random() * 1.2;
@@ -135,6 +149,19 @@ export class Bubble {
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.stroke();
+
+    // ストレスワード ( rage モード )
+    if (this.label) {
+      const fontSize = Math.max(10, Math.min(r * 0.55, 22));
+      ctx.font = `900 ${fontSize}px "Hiragino Sans", "Yu Gothic UI", system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.55)";
+      ctx.strokeText(this.label, 0, 1);
+      ctx.fillStyle = "#fff";
+      ctx.fillText(this.label, 0, 1);
+    }
 
     ctx.restore();
   }

@@ -1,4 +1,4 @@
-import { Bubble, TYPES, pickType } from "./bubble.js";
+import { Bubble, TYPES, pickType, pickStressWord } from "./bubble.js";
 import { ParticleSystem } from "./particles.js";
 import { sfx } from "./audio.js";
 
@@ -13,6 +13,32 @@ const FX = {
   low:    { particleMul: 0.5, shakeMul: 0.5 },
   medium: { particleMul: 1.0, shakeMul: 1.0 },
   high:   { particleMul: 1.6, shakeMul: 1.4 },
+};
+
+// モード別 設定。未指定の フィールドは デフォルト挙動。
+const MODES = {
+  classic: {
+    name: "classic",
+  },
+  zen: {
+    name: "zen",
+    spawnBase: 1.4,         // ゆったり
+    spawnRamp: 0,           // 加速なし
+    sizeMul: 1.1,
+    onlyNormal: true,       // 通常バブルのみ
+    skipCombo: true,        // コンボ計算なし
+    shakeMul: 0.15,         // ほぼ揺れない
+    flashMul: 0.3,
+    bgGradient: ["#0d2a3a", "#0f1a30", "#070a1a"],
+  },
+  rage: {
+    name: "rage",
+    spawnBase: 0.45,
+    spawnRamp: 0.001,
+    sizeMul: 1.05,
+    label: true,            // ストレスワードを 載せる
+    bgGradient: ["#3a0f1f", "#1a0a1c", "#070a1a"],
+  },
 };
 
 const COMBO_HOLD_TIME = 1.6;
@@ -38,9 +64,11 @@ export class Game {
     this.difficulty = opts.difficulty || "normal";
     this.fx = opts.fx || "medium";
     this.haptic = opts.haptic ?? true;
+    this.mode = opts.mode || "classic";
     this.onScore = opts.onScore || (() => {});
     this.onCombo = opts.onCombo || (() => {});
     this.onComboMilestone = opts.onComboMilestone || (() => {});
+    this.onRagePop = opts.onRagePop || (() => {});
     this.lastFrame = 0;
     this.boundLoop = this.loop.bind(this);
     this.boundResize = this.resize.bind(this);
@@ -54,6 +82,8 @@ export class Game {
   setDifficulty(d) { if (DIFFICULTY[d]) this.difficulty = d; }
   setFx(f) { if (FX[f]) this.fx = f; }
   setHaptic(v) { this.haptic = !!v; }
+  setMode(m) { if (MODES[m]) this.mode = m; }
+  modeCfg() { return MODES[this.mode] || MODES.classic; }
 
   resize() {
     const w = window.innerWidth;
@@ -81,7 +111,8 @@ export class Game {
     this.canvas.addEventListener("touchstart", onPointer, { passive: false });
   }
 
-  start() {
+  start(mode) {
+    if (mode) this.setMode(mode);
     this.running = true;
     this.score = 0;
     this.combo = 0;
@@ -110,8 +141,11 @@ export class Game {
   }
 
   spawnInterval() {
-    const cfg = DIFFICULTY[this.difficulty];
-    return Math.max(0.07, cfg.spawnBase - this.elapsed * cfg.spawnRamp);
+    const m = this.modeCfg();
+    const d = DIFFICULTY[this.difficulty];
+    const base = m.spawnBase ?? d.spawnBase;
+    const ramp = m.spawnRamp ?? d.spawnRamp;
+    return Math.max(0.07, base - this.elapsed * ramp);
   }
 
   acquireBubble(opts) {
@@ -122,16 +156,22 @@ export class Game {
   }
 
   spawn() {
-    const cfg = DIFFICULTY[this.difficulty];
-    const r = (22 + Math.random() * 26) * cfg.sizeMul;
+    const m = this.modeCfg();
+    const d = DIFFICULTY[this.difficulty];
+    const sizeMul = m.sizeMul ?? d.sizeMul;
+    const r = (22 + Math.random() * 26) * sizeMul;
     const x = r + Math.random() * (this.w - r * 2);
     const y = this.h + r + 10;
-    const speed = 70 + Math.random() * 80 + Math.min(120, this.elapsed * 1.4);
+    const speedMul = m.name === "zen" ? 0.6 : 1.0;
+    const speed = (70 + Math.random() * 80 + Math.min(120, this.elapsed * 1.4)) * speedMul;
+    const type = m.onlyNormal ? TYPES.NORMAL : pickType();
+    const label = (m.label && type === TYPES.NORMAL) ? pickStressWord() : null;
     this.acquireBubble({
       x, y, r,
       vx: (Math.random() - 0.5) * 30,
       vy: -speed,
-      type: pickType(),
+      type,
+      label,
     });
   }
 
@@ -163,8 +203,10 @@ export class Game {
     if (!b.alive) return;
     b.alive = false;
 
+    const m = this.modeCfg();
     const fxMul = FX[this.fx].particleMul;
-    const shakeMul = FX[this.fx].shakeMul;
+    const shakeMul = FX[this.fx].shakeMul * (m.shakeMul ?? 1);
+    const flashMul = m.flashMul ?? 1;
 
     let baseScore = 10;
     let shakeAdd = 4;
@@ -232,7 +274,7 @@ export class Game {
       });
     }
 
-    if (!chained) {
+    if (!chained && !m.skipCombo) {
       this.combo += 1;
       this.comboTimer = COMBO_HOLD_TIME;
       this.bestCombo = Math.max(this.bestCombo, this.combo);
@@ -249,7 +291,11 @@ export class Game {
     this.onScore(this.score);
 
     this.shake = Math.min(40, this.shake + shakeAdd * shakeMul);
-    this.flash = Math.min(1, this.flash + flashAdd);
+    this.flash = Math.min(1, this.flash + flashAdd * flashMul);
+
+    if (b.label && !chained) {
+      this.onRagePop(b.label, b.x, b.y);
+    }
 
     if (this.haptic && navigator.vibrate) {
       try { navigator.vibrate(b.type === TYPES.BOMB ? 35 : 12); } catch { /* ignore */ }
@@ -328,11 +374,12 @@ export class Game {
     const w = this.w;
     const h = this.h;
 
-    // 背景
+    // 背景 ( モード別 )
+    const bgColors = this.modeCfg().bgGradient || ["#1f1547", "#0f1530", "#070a1a"];
     const bg = ctx.createLinearGradient(0, 0, 0, h);
-    bg.addColorStop(0, "#1f1547");
-    bg.addColorStop(0.5, "#0f1530");
-    bg.addColorStop(1, "#070a1a");
+    bg.addColorStop(0, bgColors[0]);
+    bg.addColorStop(0.5, bgColors[1]);
+    bg.addColorStop(1, bgColors[2]);
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
 

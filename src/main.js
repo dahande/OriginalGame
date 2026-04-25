@@ -11,18 +11,30 @@ const comboEl = $("combo");
 const multiplierEl = $("multiplier");
 const comboBox = $("comboBox");
 const comboPop = $("comboPop");
+const ragePop = $("ragePop");
 const startOverlay = $("startOverlay");
 const settingsOverlay = $("settingsOverlay");
-const startBtn = $("startBtn");
 const settingsBtn = $("settingsBtn");
+const menuBtn = $("menuBtn");
 const closeSettingsBtn = $("closeSettingsBtn");
 const soundToggle = $("soundToggle");
 const hapticToggle = $("hapticToggle");
 const fxSelect = $("fxSelect");
 const difficultySelect = $("difficultySelect");
 const resetBestBtn = $("resetBestBtn");
+const modeBadge = $("modeBadge");
+const modeBadgeIcon = $("modeBadgeIcon");
+const modeBadgeName = $("modeBadgeName");
+const modeCards = document.querySelectorAll(".mode-card");
+
+const MODE_META = {
+  classic: { icon: "🫧", name: "クラシック" },
+  zen:     { icon: "🌿", name: "禅" },
+  rage:    { icon: "💢", name: "仕事ストレス爆破" },
+};
 
 let state = loadState();
+let currentMode = "classic";
 
 function applyState() {
   bestEl.textContent = state.best;
@@ -38,6 +50,7 @@ const game = new Game(canvas, {
   difficulty: state.difficulty,
   fx: state.fx,
   haptic: state.haptic,
+  mode: "classic",
   onScore: (s) => {
     scoreEl.textContent = s;
     if (s > state.best) {
@@ -48,25 +61,61 @@ const game = new Game(canvas, {
   onCombo: (c, m) => {
     comboEl.textContent = c;
     multiplierEl.textContent = m.toFixed(1);
-    if (c >= 3) comboBox.hidden = false;
-    else comboBox.hidden = true;
+    if (currentMode === "zen") {
+      comboBox.hidden = true;
+      return;
+    }
+    comboBox.hidden = c < 3;
   },
   onComboMilestone: (c) => {
     comboPop.textContent = `${c} COMBO!`;
     comboPop.classList.remove("show");
-    void comboPop.offsetWidth; // restart animation
+    void comboPop.offsetWidth;
     comboPop.classList.add("show");
+  },
+  onRagePop: (label) => {
+    const pops = ["粉砕!", "撃破!", "破壊!", "KO!", "スカッ!", "ざまみろ!", "解放!"];
+    const tag = pops[(Math.random() * pops.length) | 0];
+    ragePop.textContent = `${label} ${tag}`;
+    ragePop.classList.remove("show");
+    void ragePop.offsetWidth;
+    ragePop.classList.add("show");
   },
 });
 
-function startGame() {
+function startMode(mode) {
+  currentMode = mode;
   unlockAudio();
   startOverlay.hidden = true;
   settingsBtn.classList.add("visible");
-  game.start();
+  menuBtn.classList.add("visible");
+  const meta = MODE_META[mode] || MODE_META.classic;
+  modeBadgeIcon.textContent = meta.icon;
+  modeBadgeName.textContent = meta.name;
+  modeBadge.hidden = false;
+  comboBox.hidden = true;
+  game.start(mode);
 }
 
-startBtn.addEventListener("click", startGame);
+function returnToMenu() {
+  game.stop();
+  modeBadge.hidden = true;
+  comboBox.hidden = true;
+  startOverlay.hidden = false;
+  // settings ボタンは メニューでは 不要
+  settingsBtn.classList.remove("visible");
+  menuBtn.classList.remove("visible");
+}
+
+modeCards.forEach((card) => {
+  card.addEventListener("click", () => {
+    const mode = card.dataset.mode;
+    if (!mode) return;
+    startMode(mode);
+  });
+});
+
+menuBtn.addEventListener("click", returnToMenu);
 
 settingsBtn.addEventListener("click", () => {
   settingsOverlay.hidden = false;
@@ -103,19 +152,17 @@ resetBestBtn.addEventListener("click", () => {
   setTimeout(() => { resetBestBtn.textContent = "ベスト記録をリセット"; }, 1200);
 });
 
-// Pキーで一時停止 / Rでリスタート
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
-    if (!settingsOverlay.hidden) settingsOverlay.hidden = true;
+    if (!settingsOverlay.hidden) { settingsOverlay.hidden = true; return; }
+    if (startOverlay.hidden) returnToMenu();
   }
   if (e.key === "r" || e.key === "R") {
     if (!startOverlay.hidden) return;
-    game.start();
+    game.start(currentMode);
   }
 });
 
-// 画面が非アクティブになったら音を一時停止しない (BGM ではないので不要)
-// ただし AudioContext を resume する
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) unlockAudio();
 });
