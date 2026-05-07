@@ -78,13 +78,16 @@ body {
   font-weight: 900;
   letter-spacing: 0.04em;
   color: var(--ink);
+  margin: 0;
+  line-height: 1;
 }
 
 .brand-en {
   font-size: 10px;
   letter-spacing: 0.28em;
   color: var(--ink-dim);
-  margin-top: 4px;
+  margin: 4px 0 0;
+  line-height: 1;
 }
 
 .hud {

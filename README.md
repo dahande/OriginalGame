@@ -108,6 +108,26 @@ npx serve -l 8080 .
 
 ---
 
+## SEO / 検索エンジン対応
+
+検索結果に 表示されやすく する 仕掛け :
+
+- `<title>` / `meta description` / `meta keywords` で キーワード網羅
+  ( 青森りんご, スイカゲーム, 落ちものパズル, ふじ, 世界一, 王林, ... )
+- **Open Graph** / **Twitter Card** で SNS 共有時の リッチプレビュー
+  対応 ( 1200×630 の `og-image.png` 同梱 )
+- **JSON-LD** で `VideoGame` 構造化データ ( 名前 / 説明 / 言語 /
+  ジャンル / 価格 / 著者 ) を 提供
+- `robots.txt` で クロール許可、`sitemap.xml` を 配置
+- `<h1>` を ブランドタイトルに、`lang="ja"` で 日本語ページと 明示
+- `canonical` リンクで 重複コンテンツを 回避
+
+> Pages 公開後、Google Search Console / Bing Webmaster Tools に
+> サイトを 登録し、`sitemap.xml` を 提出すると 早く インデックス
+> されます。
+
+---
+
 ## ライセンス
 
 MIT — 自由に 改造して 遊んでください。
