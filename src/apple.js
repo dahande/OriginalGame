@@ -1,132 +1,70 @@
 // 青森のりんご 11 品種を 進化チェーンで 配置。
 // 半径 r は 物理サイズ ( ピクセル )、score は 合体時の 加点。
 // 各品種は 実物の 特徴 ( 縞 / 斑点 / 果点 / 二色 ) を 持つ。
+//
+// imageUrl は バンドルした 実物の 写真 ( Fruit-Images-Dataset, MIT,
+// (c) 2017-2020 Mihai Oltean and Horea Muresan より 各品種に 近い 色味の
+// りんごを マッピング )。読み込み失敗時は 自前の Canvas 描画に フォールバック。
 
-// Special:FilePath は wiki ファイル名から upload.wikimedia.org の 実画像へ
-// リダイレクトする エンドポイント。?width= で サムネ生成。CORS 対応。
-const SF = (file, w = 320) =>
-  `https://commons.wikimedia.org/wiki/Special:FilePath/${file}?width=${w}`;
+const IMG = (file) => `img/varieties/${file}`;
 
 const VARIETIES = [
   { id: 0,  name: "紅玉",          r: 18,  score: 1,
     base: "#c0271e", deep: "#7a0d0a",
     pattern: { type: "solid" },
     speckles: { count: 5,  color: "#fbe6c0", opacity: 0.45 },
-    imageQuery: "Jonathan apple",
-    imageFallbacks: [
-      SF("Jonathan_apples.jpg"),
-      SF("Jonathan_apple.jpg"),
-      SF("Jonathan-apple.jpg"),
-      SF("Red_Apple.jpg"),
-    ] },
+    imageUrl: IMG("kougyoku.jpg") },
   { id: 1,  name: "千秋",          r: 24,  score: 3,
     base: "#dd3a2c", deep: "#86120c",
     pattern: { type: "solid" },
     speckles: { count: 8,  color: "#fbe6c0", opacity: 0.4 },
-    imageQuery: "Senshu apple",
-    imageFallbacks: [
-      SF("Senshu_apple.jpg"),
-      SF("Apple-Senshu.jpg"),
-      SF("Red_Apple.jpg"),
-      SF("Apple-_Various_Cultivars.jpg"),
-    ] },
+    imageUrl: IMG("senshu.jpg") },
   { id: 2,  name: "つがる",        r: 32,  score: 6,
     base: "#e76e3d", deep: "#9a3010",
     pattern: { type: "stripes-mild", stripe: "#9a2814", count: 16, opacity: 0.32 },
     speckles: { count: 10, color: "#fbe6c0", opacity: 0.4 },
-    imageQuery: "Tsugaru apple",
-    imageFallbacks: [
-      SF("Tsugaru_apple.jpg"),
-      SF("Apple-Tsugaru.jpg"),
-      SF("Tsugaru_Apples.jpg"),
-    ] },
+    imageUrl: IMG("tsugaru.jpg") },
   { id: 3,  name: "きおう",        r: 40,  score: 10,
     base: "#f0d54e", deep: "#9a7820",
     pattern: { type: "blush", color: "#e89a30", side: 0.7, strength: 0.35 },
     speckles: { count: 14, color: "#a06820", opacity: 0.5 },
-    imageQuery: "Kiou apple",
-    imageFallbacks: [
-      SF("Kiou_apple.jpg"),
-      SF("Apple_Kiou.jpg"),
-      SF("Yellow_apples.jpg"),
-      SF("Golden_Delicious_apples.jpg"),
-    ] },
+    imageUrl: IMG("kio.jpg") },
   { id: 4,  name: "ジョナゴールド", r: 50,  score: 15,
     base: "#e8b248", deep: "#7a4a10",
     pattern: { type: "bicolor", topColor: "#cc2820", bottomColor: "#e8b248", split: 0.55 },
     speckles: { count: 14, color: "#fff0c0", opacity: 0.4 },
-    imageQuery: "Jonagold apple",
-    imageFallbacks: [
-      SF("Jonagold_(apple)_1.jpg"),
-      SF("Jonagold.jpg"),
-      SF("Jonagold_apples.jpg"),
-      SF("Jonagold-apples.jpg"),
-    ] },
+    imageUrl: IMG("jonagold.jpg") },
   { id: 5,  name: "トキ",          r: 60,  score: 21,
     base: "#f1d36f", deep: "#9a7c30",
     pattern: { type: "blush", color: "#ec7048", side: 0.65, strength: 0.4 },
     speckles: { count: 18, color: "#a06820", opacity: 0.4 },
-    imageQuery: "Toki apple",
-    imageFallbacks: [
-      SF("Toki_apple.jpg"),
-      SF("Apple_Toki.jpg"),
-      SF("Yellow_apples_(2).jpg"),
-    ] },
+    imageUrl: IMG("toki.jpg") },
   { id: 6,  name: "シナノスイート", r: 72,  score: 28,
     base: "#a31a1a", deep: "#5a0808",
     pattern: { type: "solid-glossy" },
     speckles: { count: 22, color: "#ffe080", opacity: 0.5 },
-    imageQuery: "Shinano Sweet apple",
-    imageFallbacks: [
-      SF("Shinano_Sweet_apple.jpg"),
-      SF("Shinano-sweet.jpg"),
-      SF("Red_Apple.jpg"),
-    ] },
+    imageUrl: IMG("shinano-sweet.jpg") },
   { id: 7,  name: "王林",          r: 86,  score: 36,
     base: "#c2cf68", deep: "#6a7028",
     pattern: { type: "speckle-heavy" },
     speckles: { count: 60, color: "#7a8038", opacity: 0.5 },
-    imageQuery: "Orin apple",
-    imageFallbacks: [
-      SF("Orin_apple.JPG"),
-      SF("Orin_apple.jpg"),
-      SF("Apple_Orin.jpg"),
-      SF("Mutsu_apple.jpg"),
-    ] },
+    imageUrl: IMG("ourin.jpg") },
   { id: 8,  name: "陸奥",          r: 100, score: 45,
     base: "#a8b558", deep: "#5a6020",
     pattern: { type: "stripes-mild", stripe: "#7a8038", count: 22, opacity: 0.28,
                blush: { color: "#c87830", side: 0.7, strength: 0.22 } },
     speckles: { count: 30, color: "#7a8038", opacity: 0.5 },
-    imageQuery: "Mutsu apple Crispin",
-    imageFallbacks: [
-      SF("Mutsu_apple.jpg"),
-      SF("Crispin_apple.jpg"),
-      SF("Apple_Mutsu.jpg"),
-    ] },
+    imageUrl: IMG("mutsu.jpg") },
   { id: 9,  name: "ふじ",          r: 116, score: 55,
     base: "#cd2f2a", deep: "#7a0808",
     pattern: { type: "stripes-fuji", stripe: "#a82820", undertone: "#e8a248", count: 28, opacity: 0.5 },
     speckles: { count: 26, color: "#fff0c0", opacity: 0.42 },
-    imageQuery: "Fuji apple",
-    imageFallbacks: [
-      SF("Fuji_apple.jpg"),
-      SF("Apple_Fuji.jpg"),
-      SF("Fuji_(apple).jpg"),
-      SF("Apple-Fuji.jpg"),
-    ] },
+    imageUrl: IMG("fuji.jpg") },
   { id: 10, name: "世界一",        r: 134, score: 66,
     base: "#9a1818", deep: "#460606",
     pattern: { type: "solid-glossy" },
     speckles: { count: 32, color: "#ffe080", opacity: 0.55 },
-    imageQuery: "Sekai Ichi apple",
-    imageFallbacks: [
-      SF("Sekai_Ichi.jpg"),
-      SF("Sekaiichi.jpg"),
-      SF("Sekai-ichi.jpg"),
-      SF("Sekai-ichi_apple.jpg"),
-      SF("Red_Apple.jpg"),
-    ] },
+    imageUrl: IMG("sekaiichi.jpg") },
 ];
 
 export const TIERS = VARIETIES;
@@ -163,60 +101,17 @@ export function setRenderDPR(dpr) {
   }
 }
 
-async function loadVarietyImage(v, tier) {
-  // Commons API で 検索 → 候補URL を 取得
-  let urls = [];
-  if (v.imageQuery) {
+function loadVarietyImage(v, tier) {
+  if (!v.imageUrl) return;
+  const img = new Image();
+  img.onload = () => {
     try {
-      urls = await searchCommons(v.imageQuery);
-    } catch (e) { /* ignore */ }
-  }
-  // 検索結果 + ハードコード候補
-  if (v.imageFallbacks) urls = [...urls, ...v.imageFallbacks];
-  if (urls.length === 0) return;
-  for (const url of urls) {
-    const ok = await tryLoadAndRender(v, tier, url);
-    if (ok) return;
-  }
-}
-
-async function searchCommons(query) {
-  const params = new URLSearchParams({
-    action: "query",
-    format: "json",
-    list: "search",
-    srsearch: query,
-    srnamespace: "6",  // File:
-    srlimit: "8",
-    origin: "*",
-  });
-  const resp = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`);
-  if (!resp.ok) return [];
-  const data = await resp.json();
-  const titles = (data.query && data.query.search) || [];
-  return titles
-    .map((r) => r.title.replace(/^File:/, ""))
-    .filter((t) => /\.(jpe?g|png)$/i.test(t))
-    .map((t) => `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(t)}?width=320`);
-}
-
-function tryLoadAndRender(v, tier, url) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.referrerPolicy = "no-referrer";
-    img.onload = () => {
-      try {
-        loadedImages.set(tier, img);
-        renderImageSprite(v, tier, img);
-        resolve(true);
-      } catch (e) {
-        resolve(false);
-      }
-    };
-    img.onerror = () => resolve(false);
-    img.src = url;
-  });
+      loadedImages.set(tier, img);
+      renderImageSprite(v, tier, img);
+    } catch (e) { /* fallback to canvas drawing */ }
+  };
+  img.onerror = () => { /* fallback to canvas drawing */ };
+  img.src = v.imageUrl;
 }
 
 function renderImageSprite(v, tier, img) {
