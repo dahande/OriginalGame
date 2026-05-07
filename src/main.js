@@ -1,168 +1,240 @@
-import { Game } from "./game.js";
-import { loadState, saveState, resetBest } from "./storage.js";
-import { setSoundEnabled, unlockAudio } from "./audio.js";
+import { World } from "./world.js";
+import { TIERS, MAX_TIER, pickDropTier, drawApple } from "./apple.js";
+import { loadState, saveState } from "./storage.js";
+import { setSoundEnabled, unlockAudio, sfx } from "./audio.js";
 
 const $ = (id) => document.getElementById(id);
 
+const WORLD_W = 480;
+const WORLD_H = 720;
+const DANGER_Y = 110;
+const DROP_COOLDOWN = 0.45;
+
 const canvas = $("game");
+const nextCanvas = $("next");
+const ctx = canvas.getContext("2d");
+const nextCtx = nextCanvas.getContext("2d");
+
 const scoreEl = $("score");
 const bestEl = $("best");
-const comboEl = $("combo");
-const multiplierEl = $("multiplier");
-const comboBox = $("comboBox");
-const comboPop = $("comboPop");
-const ragePop = $("ragePop");
-const startOverlay = $("startOverlay");
-const settingsOverlay = $("settingsOverlay");
-const settingsBtn = $("settingsBtn");
-const menuBtn = $("menuBtn");
-const closeSettingsBtn = $("closeSettingsBtn");
-const soundToggle = $("soundToggle");
-const hapticToggle = $("hapticToggle");
-const fxSelect = $("fxSelect");
-const difficultySelect = $("difficultySelect");
-const resetBestBtn = $("resetBestBtn");
-const modeBadge = $("modeBadge");
-const modeBadgeIcon = $("modeBadgeIcon");
-const modeBadgeName = $("modeBadgeName");
-const modeCards = document.querySelectorAll(".mode-card");
-
-const MODE_META = {
-  classic: { icon: "🫧", name: "クラシック" },
-  zen:     { icon: "🌿", name: "禅" },
-  rage:    { icon: "💢", name: "仕事ストレス爆破" },
-};
+const soundBtn = $("soundBtn");
+const gameOverModal = $("gameOverModal");
+const finalScoreEl = $("finalScore");
+const recordLine = $("recordLine");
+const bestTierName = $("bestTierName");
+const restartBtn = $("restartBtn");
+const evoList = $("evoList");
+const popLayer = $("popLayer");
 
 let state = loadState();
-let currentMode = "classic";
+let cursorX = WORLD_W / 2;
+let nextTier = pickDropTier();
+let pendingTier = pickDropTier();
+let dropCooldown = 0;
+let lastFrame = performance.now();
 
-function applyState() {
-  bestEl.textContent = state.best;
-  soundToggle.checked = !!state.sound;
-  hapticToggle.checked = !!state.haptic;
-  fxSelect.value = state.fx;
-  difficultySelect.value = state.difficulty;
-  setSoundEnabled(state.sound);
+const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+function setupCanvas(c, logicalW, logicalH) {
+  const cx = c.getContext("2d");
+  c.width = Math.floor(logicalW * dpr);
+  c.height = Math.floor(logicalH * dpr);
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
-applyState();
+setupCanvas(canvas, WORLD_W, WORLD_H);
+setupCanvas(nextCanvas, 64, 64);
 
-const game = new Game(canvas, {
-  difficulty: state.difficulty,
-  fx: state.fx,
-  haptic: state.haptic,
-  mode: "classic",
-  onScore: (s) => {
+const world = new World(WORLD_W, WORLD_H, {
+  dangerY: DANGER_Y,
+  onScore: (s, earned, x, y) => {
     scoreEl.textContent = s;
     if (s > state.best) {
       state = saveState({ best: s });
       bestEl.textContent = s;
     }
+    if (earned && x !== undefined) showScorePop(`+${earned}`, x, y);
   },
-  onCombo: (c, m) => {
-    comboEl.textContent = c;
-    multiplierEl.textContent = m.toFixed(1);
-    if (currentMode === "zen") {
-      comboBox.hidden = true;
-      return;
+  onMerge: (tier) => {
+    if (tier === MAX_TIER) sfx.maxTier();
+    else sfx.merge(tier);
+  },
+  onTierReached: (tier) => {
+    highlightEvo(tier, true);
+    if (tier > (state.bestTier || 0)) {
+      state = saveState({ bestTier: tier });
     }
-    comboBox.hidden = c < 3;
   },
-  onComboMilestone: (c) => {
-    comboPop.textContent = `${c} COMBO!`;
-    comboPop.classList.remove("show");
-    void comboPop.offsetWidth;
-    comboPop.classList.add("show");
-  },
-  onRagePop: (label) => {
-    const pops = ["粉砕!", "撃破!", "破壊!", "KO!", "スカッ!", "ざまみろ!", "解放!"];
-    const tag = pops[(Math.random() * pops.length) | 0];
-    ragePop.textContent = `${label} ${tag}`;
-    ragePop.classList.remove("show");
-    void ragePop.offsetWidth;
-    ragePop.classList.add("show");
+  onGameOver: (s) => {
+    finalScoreEl.textContent = s;
+    bestTierName.textContent = TIERS[world.bestTierReached].name;
+    if (s > 0 && s >= state.best) {
+      recordLine.textContent = "新記録 達成!";
+    } else {
+      recordLine.textContent = `ベスト: ${state.best}`;
+    }
+    gameOverModal.hidden = false;
+    sfx.gameOver();
   },
 });
 
-function startMode(mode) {
-  currentMode = mode;
-  unlockAudio();
-  startOverlay.hidden = true;
-  settingsBtn.classList.add("visible");
-  menuBtn.classList.add("visible");
-  const meta = MODE_META[mode] || MODE_META.classic;
-  modeBadgeIcon.textContent = meta.icon;
-  modeBadgeName.textContent = meta.name;
-  modeBadge.hidden = false;
-  comboBox.hidden = true;
-  game.start(mode);
-}
-
-function returnToMenu() {
-  game.stop();
-  modeBadge.hidden = true;
-  comboBox.hidden = true;
-  startOverlay.hidden = false;
-  // settings ボタンは メニューでは 不要
-  settingsBtn.classList.remove("visible");
-  menuBtn.classList.remove("visible");
-}
-
-modeCards.forEach((card) => {
-  card.addEventListener("click", () => {
-    const mode = card.dataset.mode;
-    if (!mode) return;
-    startMode(mode);
+function buildEvolutionList() {
+  evoList.innerHTML = "";
+  TIERS.forEach((t, i) => {
+    const li = document.createElement("li");
+    li.className = "evo-row";
+    li.dataset.tier = i;
+    li.innerHTML = `
+      <span class="evo-dot" style="background: radial-gradient(circle at 30% 30%, ${lightenHex(t.color, 0.4)}, ${t.color} 60%, ${darkenHex(t.color, 0.3)} 100%);"></span>
+      <span class="evo-name">${t.name}</span>
+      <span class="evo-num">${i + 1}</span>
+    `;
+    evoList.appendChild(li);
   });
+  if (state.bestTier) {
+    for (let i = 0; i <= state.bestTier; i++) highlightEvo(i, false);
+  }
+}
+
+function highlightEvo(tier, animate) {
+  const li = evoList.querySelector(`[data-tier="${tier}"]`);
+  if (!li) return;
+  li.classList.add("reached");
+  if (animate) {
+    li.classList.add("just-reached");
+    setTimeout(() => li.classList.remove("just-reached"), 800);
+  }
+}
+
+function showScorePop(text, worldX, worldY) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = rect.left + (worldX / WORLD_W) * rect.width;
+  const sy = rect.top + (worldY / WORLD_H) * rect.height;
+  const el = document.createElement("div");
+  el.className = "score-pop";
+  el.textContent = text;
+  el.style.left = `${sx}px`;
+  el.style.top = `${sy}px`;
+  popLayer.appendChild(el);
+  setTimeout(() => el.remove(), 950);
+}
+
+function pointerToWorldX(clientX) {
+  const rect = canvas.getBoundingClientRect();
+  const px = clientX - rect.left;
+  return (px / rect.width) * WORLD_W;
+}
+
+canvas.addEventListener("pointermove", (e) => {
+  cursorX = pointerToWorldX(e.clientX);
 });
 
-menuBtn.addEventListener("click", returnToMenu);
-
-settingsBtn.addEventListener("click", () => {
-  settingsOverlay.hidden = false;
+canvas.addEventListener("pointerdown", (e) => {
+  unlockAudio();
+  if (world.gameOver) return;
+  cursorX = pointerToWorldX(e.clientX);
+  if (dropCooldown > 0) return;
+  dropApple();
 });
-closeSettingsBtn.addEventListener("click", () => {
-  settingsOverlay.hidden = true;
+
+canvas.addEventListener("touchmove", (e) => {
+  if (e.cancelable) e.preventDefault();
+}, { passive: false });
+
+function dropApple() {
+  const r = TIERS[nextTier].r;
+  const x = clamp(cursorX, r + 6, WORLD_W - r - 6);
+  const a = world.spawn(x, nextTier);
+  a.vy = 80;
+  a.y = -r;
+  sfx.drop();
+  nextTier = pendingTier;
+  pendingTier = pickDropTier();
+  dropCooldown = DROP_COOLDOWN;
+  drawNext();
+}
+
+function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+function drawCursor() {
+  if (world.gameOver) return;
+  const tier = nextTier;
+  const r = TIERS[tier].r;
+  const x = clamp(cursorX, r + 6, WORLD_W - r - 6);
+  const y = r + 6;
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(120, 80, 30, 0.35)";
+  ctx.setLineDash([4, 6]);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x, y + r);
+  ctx.lineTo(x, WORLD_H - 8);
+  ctx.stroke();
+  ctx.restore();
+
+  drawApple(ctx, x, y, r, tier, { opacity: dropCooldown > 0 ? 0.25 : 0.65 });
+}
+
+function drawNext() {
+  nextCtx.clearRect(0, 0, 64, 64);
+  const r = 22;
+  drawApple(nextCtx, 32, 36, r, pendingTier);
+}
+
+function loop(now) {
+  const dt = Math.min(0.05, (now - lastFrame) / 1000);
+  lastFrame = now;
+  if (dropCooldown > 0) dropCooldown = Math.max(0, dropCooldown - dt);
+  world.step(dt);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, WORLD_W, WORLD_H);
+  world.draw(ctx);
+  drawCursor();
+  requestAnimationFrame(loop);
+}
+
+restartBtn.addEventListener("click", () => {
+  unlockAudio();
+  world.reset();
+  nextTier = pickDropTier();
+  pendingTier = pickDropTier();
+  dropCooldown = 0;
+  scoreEl.textContent = "0";
+  gameOverModal.hidden = true;
+  drawNext();
 });
 
-soundToggle.addEventListener("change", () => {
-  state = saveState({ sound: soundToggle.checked });
+soundBtn.addEventListener("click", () => {
+  state = saveState({ sound: !state.sound });
   setSoundEnabled(state.sound);
   if (state.sound) unlockAudio();
-});
-
-hapticToggle.addEventListener("change", () => {
-  state = saveState({ haptic: hapticToggle.checked });
-  game.setHaptic(state.haptic);
-});
-
-fxSelect.addEventListener("change", () => {
-  state = saveState({ fx: fxSelect.value });
-  game.setFx(state.fx);
-});
-
-difficultySelect.addEventListener("change", () => {
-  state = saveState({ difficulty: difficultySelect.value });
-  game.setDifficulty(state.difficulty);
-});
-
-resetBestBtn.addEventListener("click", () => {
-  state = resetBest();
-  bestEl.textContent = state.best;
-  resetBestBtn.textContent = "リセット完了";
-  setTimeout(() => { resetBestBtn.textContent = "ベスト記録をリセット"; }, 1200);
+  soundBtn.classList.toggle("muted", !state.sound);
 });
 
 window.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    if (!settingsOverlay.hidden) { settingsOverlay.hidden = true; return; }
-    if (startOverlay.hidden) returnToMenu();
-  }
   if (e.key === "r" || e.key === "R") {
-    if (!startOverlay.hidden) return;
-    game.start(currentMode);
+    if (!gameOverModal.hidden) restartBtn.click();
   }
 });
 
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) unlockAudio();
 });
+
+bestEl.textContent = state.best;
+setSoundEnabled(state.sound);
+soundBtn.classList.toggle("muted", !state.sound);
+buildEvolutionList();
+drawNext();
+requestAnimationFrame(loop);
+
+function lightenHex(hex, amt) { return mixHex(hex, "#ffffff", amt); }
+function darkenHex(hex, amt)  { return mixHex(hex, "#000000", amt); }
+function mixHex(a, b, t) {
+  const ar = parseInt(a.slice(1, 3), 16), ag = parseInt(a.slice(3, 5), 16), ab = parseInt(a.slice(5, 7), 16);
+  const br = parseInt(b.slice(1, 3), 16), bg = parseInt(b.slice(3, 5), 16), bb = parseInt(b.slice(5, 7), 16);
+  const r = Math.round(ar + (br - ar) * t);
+  const g = Math.round(ag + (bg - ag) * t);
+  const c = Math.round(ab + (bb - ab) * t);
+  return `#${[r, g, c].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}

@@ -1,11 +1,9 @@
-const KEY = "bubble-smash-v1";
+const KEY = "aomori-ringo-v1";
 
 const defaults = {
   best: 0,
+  bestTier: 0,
   sound: true,
-  haptic: true,
-  fx: "medium",
-  difficulty: "normal",
 };
 
 function readRaw() {
@@ -21,7 +19,7 @@ function writeRaw(state) {
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch {
-    /* quota exceeded or storage disabled — ignore */
+    /* ignore */
   }
 }
 
@@ -36,5 +34,5 @@ export function saveState(patch) {
 }
 
 export function resetBest() {
-  return saveState({ best: 0 });
+  return saveState({ best: 0, bestTier: 0 });
 }
