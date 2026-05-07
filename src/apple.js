@@ -141,10 +141,13 @@ function renderImageSprite(v, tier, img) {
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.clip();
 
-  const imgSize = Math.min(img.naturalWidth || img.width, img.naturalHeight || img.height);
-  const sx = ((img.naturalWidth || img.width) - imgSize) / 2;
-  const sy = ((img.naturalHeight || img.height) - imgSize) / 2;
-  ctx.drawImage(img, sx, sy, imgSize, imgSize, cx - r, cy - r, r * 2, r * 2);
+  // 写真は 中央に 寄せて、外周の 白背景が 見えないように 0.82 倍 で クロップ
+  const iw = img.naturalWidth  || img.width;
+  const ih = img.naturalHeight || img.height;
+  const imgSide = Math.min(iw, ih) * 0.82;
+  const sx = (iw - imgSide) / 2;
+  const sy = (ih - imgSide) / 2;
+  ctx.drawImage(img, sx, sy, imgSide, imgSide, cx - r, cy - r, r * 2, r * 2);
 
   // 縁の 暗影 ( 球体感 )
   const edge = ctx.createRadialGradient(cx, cy, r * 0.65, cx, cy, r);
@@ -162,13 +165,6 @@ function renderImageSprite(v, tier, img) {
   ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
 
   ctx.restore();
-
-  // 縁取り
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.lineWidth = 1.5;
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.22)";
-  ctx.stroke();
 
   const key = tier * 10 + Math.round(_dpr * 10);
   cache.set(key, { canvas, size, baseR: v.r, isImage: true });
@@ -200,9 +196,6 @@ export function drawApple(ctx, x, y, r, tier, opts = {}) {
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(cached.canvas, x - drawSize / 2, y - drawSize / 2, drawSize, drawSize);
   ctx.restore();
-
-  // 品種名は キャッシュに 入れず 毎回 描く ( 拡縮で 文字が ぼやけないように )
-  if (r >= 28) drawName(ctx, x, y, r, TIERS[tier].name);
 }
 
 function getCached(tier) {
