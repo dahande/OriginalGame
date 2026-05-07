@@ -1,5 +1,5 @@
 import { World } from "./world.js";
-import { TIERS, MAX_TIER, pickDropTier, drawApple } from "./apple.js";
+import { TIERS, MAX_TIER, pickDropTier, drawApple, setRenderDPR } from "./apple.js";
 import { loadState, saveState } from "./storage.js";
 import { setSoundEnabled, unlockAudio, sfx } from "./audio.js";
 
@@ -34,6 +34,7 @@ let dropCooldown = 0;
 let lastFrame = performance.now();
 
 const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+setRenderDPR(dpr);
 
 function setupCanvas(c, logicalW, logicalH) {
   const cx = c.getContext("2d");
