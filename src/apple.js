@@ -196,6 +196,9 @@ export function drawApple(ctx, x, y, r, tier, opts = {}) {
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(cached.canvas, x - drawSize / 2, y - drawSize / 2, drawSize, drawSize);
   ctx.restore();
+
+  // 品種名は キャッシュに 入れず 毎回 描く ( 拡縮で 文字が ぼやけないように )
+  if (r >= 22) drawName(ctx, x, y, r, TIERS[tier].name);
 }
 
 function getCached(tier) {
