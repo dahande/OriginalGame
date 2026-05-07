@@ -190,7 +190,7 @@ export class World {
         this.onScore(this.score, earned, cx, cy);
         this.onMerge(newTier, cx, cy);
 
-        const palette = [TIERS[newTier].color, "#ffffff", "#fff2c0", "#fff7e0"];
+        const palette = [TIERS[newTier].base, "#ffffff", "#fff2c0", "#fff7e0"];
         this.particles.emitBurst(cx, cy, {
           count: Math.min(48, 16 + newTier * 3),
           colors: palette,
@@ -204,7 +204,7 @@ export class World {
         this.particles.emitRing(cx, cy, {
           count: 22,
           radius: newR * 0.6,
-          color: TIERS[newTier].color,
+          color: TIERS[newTier].base,
           thickness: 3,
           life: 0.4,
         });

@@ -85,7 +85,7 @@ function buildEvolutionList() {
     li.className = "evo-row";
     li.dataset.tier = i;
     li.innerHTML = `
-      <span class="evo-dot" style="background: radial-gradient(circle at 30% 30%, ${lightenHex(t.color, 0.4)}, ${t.color} 60%, ${darkenHex(t.color, 0.3)} 100%);"></span>
+      <span class="evo-dot" style="background: radial-gradient(circle at 30% 30%, ${lightenHex(t.base, 0.4)}, ${t.base} 60%, ${darkenHex(t.base, 0.3)} 100%);"></span>
       <span class="evo-name">${t.name}</span>
       <span class="evo-num">${i + 1}</span>
     `;
