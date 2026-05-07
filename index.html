@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-  <meta name="theme-color" content="#fde7c2" />
   <title>青森りんご合体パズル | 紅玉から世界一まで 11品種 - Aomori Apple Merge</title>
   <meta name="description" content="青森のりんご11品種 ( 紅玉 / 千秋 / つがる / きおう / ジョナゴールド / トキ / シナノスイート / 王林 / 陸奥 / ふじ / 世界一 ) を 全部使った 落ちもの 物理パズルゲーム。スイカゲーム風に 同じ品種を 合体させて 世界一を 目指そう。無料、ブラウザで すぐ遊べる、インストール不要、スマホ対応。" />
   <meta name="keywords" content="青森りんご, りんごゲーム, スイカゲーム, 落ちものパズル, 合体ゲーム, ふじ, 世界一, 王林, 紅玉, ブラウザゲーム, 無料ゲーム, 物理パズル, ストレス発散, 青森" />
@@ -24,9 +23,11 @@
   <meta property="og:description" content="青森のりんご11品種を 全部使った 落ちもの物理パズル。同じ品種を ぶつけて 進化させ、最終的に 世界一を 作ろう。ブラウザで 無料プレイ。" />
   <meta property="og:url" content="https://dahande.github.io/OriginalGame/" />
   <meta property="og:image" content="https://dahande.github.io/OriginalGame/og-image.png" />
+  <meta property="og:image:secure_url" content="https://dahande.github.io/OriginalGame/og-image.png" />
+  <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="青森りんご合体パズル - 11品種のりんごのイラスト" />
+  <meta property="og:image:alt" content="青森りんご合体パズル - 紅玉から世界一まで11品種が並んだロゴ" />
   <meta property="og:locale" content="ja_JP" />
 
   <!-- Twitter Card -->
@@ -34,6 +35,10 @@
   <meta name="twitter:title" content="青森りんご合体パズル - 11品種を合体させて世界一を目指す" />
   <meta name="twitter:description" content="青森のりんご11品種を 全部使った 落ちもの物理パズル。ブラウザで 無料プレイ。" />
   <meta name="twitter:image" content="https://dahande.github.io/OriginalGame/og-image.png" />
+  <meta name="twitter:image:alt" content="青森りんご合体パズル - 紅玉から世界一まで11品種が並んだロゴ" />
+
+  <!-- Discord は Open Graph を 主に 使うため 上記で 対応 -->
+  <meta name="theme-color" content="#c0271e" />
 
   <link rel="stylesheet" href="src/styles.css" />
   <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='55' r='40' fill='%23c0271e'/><rect x='47' y='13' width='6' height='14' fill='%235a3a1a'/><ellipse cx='62' cy='18' rx='12' ry='5' transform='rotate(-25 62 18)' fill='%233f8c3f'/></svg>" />
@@ -130,7 +135,41 @@
       </p>
       <p class="record" id="recordLine"></p>
       <p class="best-tier-line">最高到達: <span id="bestTierName">紅玉</span></p>
-      <button class="btn btn-primary" id="restartBtn">もう一度</button>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="menuBtn">メニュー</button>
+        <button class="btn btn-primary" id="restartBtn">もう一度</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay overlay-home" id="homeOverlay">
+    <div class="panel home-panel">
+      <div class="home-title-row">
+        <span class="home-emoji" aria-hidden="true">🍎</span>
+        <hgroup class="home-headings">
+          <h1 class="home-title">青森りんご合体</h1>
+          <p class="home-sub">AOMORI APPLE MERGE</p>
+        </hgroup>
+      </div>
+      <p class="home-desc">同じ品種を 合体させて<br/><strong>世界一</strong> を 目指そう</p>
+
+      <h2 class="home-modes-title">モードを 選択</h2>
+      <div class="mode-grid">
+        <button class="mode-btn mode-normal" data-mode="normal" type="button">
+          <span class="mode-icon" aria-hidden="true">🌱</span>
+          <span class="mode-name">ふつう</span>
+          <span class="mode-desc">標準サイズ ( 480 × 720 )</span>
+          <span class="mode-best" id="bestNormalLabel">ベスト 0</span>
+        </button>
+        <button class="mode-btn mode-hard" data-mode="hard" type="button">
+          <span class="mode-icon" aria-hidden="true">🔥</span>
+          <span class="mode-name">ハード</span>
+          <span class="mode-desc">狭い箱 ( 360 × 640 ) で 挑戦</span>
+          <span class="mode-best" id="bestHardLabel">ベスト 0</span>
+        </button>
+      </div>
+
+      <p class="home-footnote">マウス / タップで バブルを 落とす<br/>ラインを 越え続けると ゲームオーバー</p>
     </div>
   </div>
 
