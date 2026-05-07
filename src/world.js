@@ -6,8 +6,9 @@ const RESTITUTION = 0.18;
 const SUBSTEPS = 4;
 const VEL_DAMP = 0.999;
 const GROUND_FRICTION = 0.92;
-const DANGER_HOLD = 1.8;   // 何秒 危険ラインを 越え続けたら ゲームオーバー
-const DANGER_GRACE = 1.2;  // 投下直後 この秒数は 判定しない
+const DANGER_HOLD = 1.6;   // 何秒 危険ラインを 越え続けたら ゲームオーバー
+const DANGER_GRACE = 0.8;  // 投下直後 この秒数は 判定しない
+const DANGER_RESET_BUFFER = 8;  // ライン下に この px 以上 戻らないと タイマーは リセットされない ( ヒステリシス )
 
 let nextId = 1;
 
@@ -69,8 +70,9 @@ export class World {
     for (const a of this.apples) {
       a.age += dt;
       const top = a.y - a.r;
-      const settled = Math.abs(a.vy) < 30 && Math.abs(a.vx) < 30;
-      if (top < this.dangerY && settled && a.age > DANGER_GRACE) {
+      // ライン より 上 ( 危険 ) なら 経過時間 を 加算。
+      // grace は 落下中・合体直後の りんごが 一瞬 ラインに 触れるのを 許容するため。
+      if (top < this.dangerY && a.age > DANGER_GRACE) {
         a.dangerTime += dt;
         if (a.dangerTime > DANGER_HOLD) {
           this.gameOver = true;
@@ -78,7 +80,9 @@ export class World {
           this.onGameOver(this.score);
           return;
         }
-      } else if (top >= this.dangerY) {
+      } else if (top >= this.dangerY + DANGER_RESET_BUFFER) {
+        // ヒステリシス : ライン下 8px 以上 戻った 場合のみ リセット。
+        // 振動で ライン付近を 行き来する 場合は 加算を 維持する。
         a.dangerTime = 0;
       }
     }

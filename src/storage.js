@@ -28,7 +28,7 @@ export function loadState() {
 }
 
 export function saveState(patch) {
-  const merged = { ...readRaw(), ...patch };
+  const merged = { ...defaults, ...readRaw(), ...patch };
   writeRaw(merged);
   return merged;
 }
