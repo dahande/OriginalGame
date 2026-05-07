@@ -1,5 +1,5 @@
-// Web Audio API でレイテンシの低い効果音を合成する。
-// 音声ファイル不要、かつブラウザ間で安定する。
+// Web Audio API でレイテンシの低い効果音を 合成。
+// 音声ファイル不要、ブラウザ間で 安定。
 
 let ctx = null;
 let masterGain = null;
@@ -11,7 +11,7 @@ function ensureCtx() {
   if (!AC) return null;
   ctx = new AC();
   masterGain = ctx.createGain();
-  masterGain.gain.value = 0.6;
+  masterGain.gain.value = 0.55;
   masterGain.connect(ctx.destination);
   return ctx;
 }
@@ -23,7 +23,7 @@ export function unlockAudio() {
 
 export function setSoundEnabled(v) {
   enabled = !!v;
-  if (masterGain) masterGain.gain.value = enabled ? 0.6 : 0;
+  if (masterGain) masterGain.gain.value = enabled ? 0.55 : 0;
 }
 
 function envBeep({ freq = 440, type = "sine", dur = 0.15, vol = 0.3, slide = 0, delay = 0 }) {
@@ -66,33 +66,36 @@ function noiseBurst({ dur = 0.18, vol = 0.25, freq = 1200, q = 0.9, delay = 0 })
   src.start(t0);
 }
 
+const PENTATONIC = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+function pentNote(tier) {
+  const semis = PENTATONIC[Math.min(tier, PENTATONIC.length - 1)];
+  return 330 * Math.pow(2, semis / 12);
+}
+
 export const sfx = {
-  pop(combo = 0) {
-    const base = 540 + Math.min(combo, 30) * 28;
-    envBeep({ freq: base, type: "triangle", dur: 0.09, vol: 0.22, slide: -300 });
-    noiseBurst({ dur: 0.08, vol: 0.12, freq: 2200, q: 1.2 });
+  drop() {
+    envBeep({ freq: 280, type: "sine", dur: 0.07, vol: 0.18, slide: -120 });
+    noiseBurst({ dur: 0.04, vol: 0.06, freq: 900, q: 1.4 });
   },
-  bomb() {
-    envBeep({ freq: 180, type: "square", dur: 0.25, vol: 0.3, slide: -120 });
-    noiseBurst({ dur: 0.4, vol: 0.32, freq: 380, q: 0.6 });
-    noiseBurst({ dur: 0.25, vol: 0.18, freq: 90, q: 0.5, delay: 0.04 });
+  merge(tier) {
+    const f = pentNote(tier);
+    envBeep({ freq: f,        type: "sine",     dur: 0.16, vol: 0.22 });
+    envBeep({ freq: f * 1.5,  type: "triangle", dur: 0.22, vol: 0.16, delay: 0.04 });
+    envBeep({ freq: f * 2,    type: "sine",     dur: 0.18, vol: 0.12, delay: 0.08 });
+    noiseBurst({ dur: 0.06, vol: 0.06, freq: 2400, q: 1.6 });
   },
-  rainbow() {
-    [0, 0.05, 0.1, 0.16, 0.22].forEach((d, i) => {
-      envBeep({ freq: 520 + i * 110, type: "triangle", dur: 0.18, vol: 0.18, slide: 200, delay: d });
+  maxTier() {
+    const base = 523;
+    [0, 0.09, 0.18, 0.28, 0.4, 0.55].forEach((d, i) => {
+      envBeep({ freq: base * Math.pow(1.122, i), type: "sine", dur: 0.28, vol: 0.22, delay: d });
     });
-    noiseBurst({ dur: 0.5, vol: 0.18, freq: 3200, q: 0.8 });
   },
-  gold() {
-    envBeep({ freq: 880, type: "sine", dur: 0.12, vol: 0.22 });
-    envBeep({ freq: 1320, type: "sine", dur: 0.18, vol: 0.18, delay: 0.07 });
-    envBeep({ freq: 1760, type: "sine", dur: 0.22, vol: 0.16, delay: 0.14 });
+  gameOver() {
+    envBeep({ freq: 440, type: "sawtooth", dur: 0.4,  vol: 0.18, slide: -300 });
+    envBeep({ freq: 220, type: "sawtooth", dur: 0.55, vol: 0.16, slide: -120, delay: 0.3 });
+    envBeep({ freq: 110, type: "sine",     dur: 0.7,  vol: 0.14, delay: 0.6 });
   },
-  combo(combo) {
-    const f = 660 + Math.min(combo, 40) * 35;
-    envBeep({ freq: f, type: "sine", dur: 0.16, vol: 0.22, slide: 300 });
-  },
-  miss() {
-    envBeep({ freq: 220, type: "sawtooth", dur: 0.12, vol: 0.12, slide: -120 });
+  hover() {
+    envBeep({ freq: 660, type: "sine", dur: 0.04, vol: 0.06 });
   },
 };
