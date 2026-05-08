@@ -4,6 +4,7 @@ const defaults = {
   best: 0,
   bestNormal: 0,
   bestHard: 0,
+  bestSkull: 0,
   bestTier: 0,
   sound: true,
 };
