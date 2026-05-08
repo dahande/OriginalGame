@@ -148,6 +148,148 @@ function noteForTier(tier) {
   return PENTATONIC_HZ[Math.min(tier, PENTATONIC_HZ.length - 1)];
 }
 
+// BGM : Web Audio で その場合成。コード進行 + アルペジオ + ベース。
+// 著作物を 使わず、毎回 同じ パターンが ループするだけの シンプルな 構造。
+let bgmStarted = false;
+let bgmEnabled = true;
+let bgmGain = null;
+let bgmFilter = null;
+let bgmNextTime = 0;
+let bgmStep = 0;
+let bgmTimer = 0;
+
+const BGM_BPM = 78;
+const BGM_BEAT = 60 / BGM_BPM;
+const BGM_STEP = BGM_BEAT / 2;          // 8 分音符
+const BGM_STEPS_PER_CHORD = 8;          // 1 小節 / コード
+const BGM_TOTAL_STEPS = BGM_STEPS_PER_CHORD * 4;
+
+// コード進行 ( ルート Hz, 三和音 )。Imaj - vi - IV - V の 進行。
+const BGM_CHORDS = [
+  [261.63, 329.63, 392.00],  // C
+  [220.00, 261.63, 329.63],  // Am
+  [174.61, 220.00, 261.63],  // F
+  [196.00, 246.94, 293.66],  // G
+];
+
+function bgmTone(freq, type, dur, vol, time, options = {}) {
+  const c = ensureCtx();
+  if (!c || !bgmGain) return;
+  const osc = c.createOscillator();
+  const g = c.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  if (options.detune) osc.detune.value = options.detune;
+  g.gain.setValueAtTime(0, time);
+  g.gain.linearRampToValueAtTime(vol, time + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+  osc.connect(g).connect(bgmGain);
+  osc.start(time);
+  osc.stop(time + dur + 0.05);
+}
+
+function bgmHat(time, vol = 0.04) {
+  const c = ensureCtx();
+  if (!c || !bgmGain) return;
+  const dur = 0.06;
+  const len = Math.floor(c.sampleRate * dur);
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  const hp = c.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 6000;
+  const g = c.createGain();
+  g.gain.setValueAtTime(vol, time);
+  g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+  src.connect(hp).connect(g).connect(bgmGain);
+  src.start(time);
+}
+
+function scheduleBgmStep(globalStep, time) {
+  const chordIdx = Math.floor(globalStep / BGM_STEPS_PER_CHORD) % BGM_CHORDS.length;
+  const stepInChord = globalStep % BGM_STEPS_PER_CHORD;
+  const chord = BGM_CHORDS[chordIdx];
+  const [root, third, fifth] = chord;
+
+  // ベース ( 1 小節の 1, 5 拍 )
+  if (stepInChord === 0) bgmTone(root / 2, "triangle", BGM_BEAT * 1.4, 0.18, time);
+  if (stepInChord === 4) bgmTone(fifth / 2, "triangle", BGM_BEAT * 0.9, 0.13, time);
+
+  // パッド ( 1 小節の 0 ステップ で コード全部を ロング サスティン )
+  if (stepInChord === 0) {
+    const padDur = BGM_BEAT * 3.6;
+    bgmTone(root,  "sine", padDur, 0.06, time);
+    bgmTone(third, "sine", padDur, 0.045, time);
+    bgmTone(fifth, "sine", padDur, 0.045, time);
+  }
+
+  // アルペジオ ( 8 分の 各ステップ )
+  const arpPattern = [0, 2, 1, 2, 0, 2, 1, 2];   // chord index 0/1/2
+  const arpNote = chord[arpPattern[stepInChord]] * 2;  // 1 オクターブ上
+  bgmTone(arpNote, "triangle", BGM_STEP * 1.6, 0.05, time + 0.005);
+
+  // 軽い ハイハット 風
+  if (stepInChord === 2 || stepInChord === 6) bgmHat(time);
+}
+
+function scheduleBgm() {
+  if (!bgmStarted) return;
+  const c = ensureCtx();
+  if (!c) { bgmTimer = 0; return; }
+  const horizon = c.currentTime + 0.6;
+  while (bgmNextTime < horizon) {
+    scheduleBgmStep(bgmStep, bgmNextTime);
+    bgmNextTime += BGM_STEP;
+    bgmStep = (bgmStep + 1) % BGM_TOTAL_STEPS;
+  }
+  bgmTimer = setTimeout(scheduleBgm, 120);
+}
+
+export const bgm = {
+  start() {
+    const c = ensureCtx();
+    if (!c) return;
+    if (!bgmGain) {
+      bgmFilter = c.createBiquadFilter();
+      bgmFilter.type = "lowpass";
+      bgmFilter.frequency.value = 3200;
+      bgmFilter.Q.value = 0.7;
+      bgmGain = c.createGain();
+      bgmGain.gain.value = bgmEnabled ? 0.45 : 0;
+      bgmGain.connect(bgmFilter).connect(busGain);
+    }
+    if (bgmStarted) return;
+    bgmStarted = true;
+    bgmNextTime = c.currentTime + 0.05;
+    bgmStep = 0;
+    scheduleBgm();
+  },
+  pause() {
+    bgmStarted = false;
+    if (bgmTimer) { clearTimeout(bgmTimer); bgmTimer = 0; }
+  },
+  resume() {
+    if (bgmStarted) return;
+    const c = ensureCtx();
+    if (!c || !bgmGain) return;
+    bgmStarted = true;
+    bgmNextTime = c.currentTime + 0.05;
+    scheduleBgm();
+  },
+  setEnabled(v) {
+    bgmEnabled = !!v;
+    if (bgmGain) {
+      const c = ensureCtx();
+      const t = c ? c.currentTime : 0;
+      bgmGain.gain.cancelScheduledValues(t);
+      bgmGain.gain.linearRampToValueAtTime(bgmEnabled ? 0.45 : 0, t + 0.2);
+    }
+  },
+};
+
 export const sfx = {
   // 落下: 木琴ぽい 短い 「ぽん」
   drop() {

@@ -1,7 +1,7 @@
 import { World } from "./world.js";
 import { TIERS, MAX_TIER, pickDropTier, drawApple, setRenderDPR } from "./apple.js";
 import { loadState, saveState } from "./storage.js";
-import { setSoundEnabled, unlockAudio, sfx } from "./audio.js";
+import { setSoundEnabled, unlockAudio, sfx, bgm } from "./audio.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -121,6 +121,7 @@ function startMode(modeKey) {
   if (!m) return;
   currentMode = modeKey;
   unlockAudio();
+  bgm.start();
 
   // キャンバスは 全モード 共通サイズ ( 旧ハード )
   canvas.style.aspectRatio = `${BOX_W} / ${BOX_H}`;
@@ -362,6 +363,7 @@ function boostVideoVolume() {
 
 function showHorror() {
   horrorOverlay.hidden = false;
+  bgm.pause();
   if (horrorVideo) {
     horrorOverlay.classList.add("has-video");
     try {
@@ -398,6 +400,7 @@ function closeHorror() {
   }
   horrorOverlay.classList.remove("has-video");
   horrorOverlay.hidden = true;
+  bgm.resume();
   const exitFs = document.exitFullscreen ||
                  document.webkitExitFullscreen ||
                  document.msExitFullscreen;
@@ -424,7 +427,11 @@ horrorOverlay.addEventListener("touchend", (e) => {
 soundBtn.addEventListener("click", () => {
   state = saveState({ sound: !state.sound });
   setSoundEnabled(state.sound);
-  if (state.sound) unlockAudio();
+  bgm.setEnabled(state.sound);
+  if (state.sound) {
+    unlockAudio();
+    bgm.start();
+  }
   soundBtn.classList.toggle("muted", !state.sound);
 });
 
@@ -445,6 +452,7 @@ document.addEventListener("visibilitychange", () => {
 
 bestEl.textContent = state.best;
 setSoundEnabled(state.sound);
+bgm.setEnabled(state.sound);
 soundBtn.classList.toggle("muted", !state.sound);
 buildEvolutionList();
 refreshHomeBests();
