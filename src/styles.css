@@ -601,7 +601,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: radial-gradient(circle at 50% 30%, #4a0010 0%, #1a0008 50%, #000 100%);
+  background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -609,6 +609,20 @@ body {
   gap: 18px;
   animation: horrorEnter 0.18s steps(2) forwards;
   overflow: hidden;
+}
+
+.horror-overlay:fullscreen {
+  background: #000;
+}
+
+.horror-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  z-index: 0;
 }
 
 .horror-overlay[hidden] { display: none; }
@@ -649,6 +663,21 @@ body {
   text-align: center;
   padding: 24px;
   animation: horrorShake 0.12s steps(3) infinite;
+}
+
+.horror-overlay.has-video .horror-noise,
+.horror-overlay.has-video .horror-skull,
+.horror-overlay.has-video .horror-text {
+  display: none;
+}
+
+.horror-overlay.has-video .horror-content {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  padding: 0;
+  animation: none;
 }
 
 @keyframes horrorShake {
