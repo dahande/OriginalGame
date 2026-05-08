@@ -5,9 +5,16 @@ import { setSoundEnabled, unlockAudio, sfx } from "./audio.js";
 
 const $ = (id) => document.getElementById(id);
 
+// 全モード 共通の 箱サイズ ( 旧ハードに 統一 )
+const BOX_W = 360;
+const BOX_H = 640;
+const DANGER_Y = 100;
+
 const MODES = {
-  normal: { name: "ふつう", width: 480, height: 720, dangerY: 110, bestKey: "bestNormal" },
-  hard:   { name: "ハード", width: 360, height: 640, dangerY: 100, bestKey: "bestHard" },
+  normal: { name: "ふつう", dropLimit: Infinity, bestKey: "bestNormal" },
+  hard:   { name: "ハード", dropLimit: 1.5,      bestKey: "bestHard"   },
+  skull:  { name: "ドクロ", dropLimit: 1.0,      bestKey: "bestSkull",
+            horrorThreshold: 3000 },
 };
 
 const DROP_COOLDOWN = 0.45;
@@ -31,6 +38,10 @@ const evoList = $("evoList");
 const popLayer = $("popLayer");
 const bestNormalLabel = $("bestNormalLabel");
 const bestHardLabel = $("bestHardLabel");
+const bestSkullLabel = $("bestSkullLabel");
+const horrorOverlay = $("horrorOverlay");
+const horrorCloseBtn = $("horrorCloseBtn");
+const horrorScore = $("horrorScore");
 
 let state = loadState();
 
@@ -40,6 +51,7 @@ let cursorX = 0;
 let nextTier = pickDropTier();
 let pendingTier = pickDropTier();
 let dropCooldown = 0;
+let dropTimer = 0;     // モード別 制限時間 ( 0 で 自動投下 )
 let lastFrame = performance.now();
 let loopStarted = false;
 
@@ -56,8 +68,8 @@ setupCanvas(nextCanvas, 64, 64);
 
 function ensureWorld() {
   if (world) return world;
-  world = new World(480, 720, {
-    dangerY: 110,
+  world = new World(BOX_W, BOX_H, {
+    dangerY: DANGER_Y,
     onScore: (s, earned, x, y) => {
       scoreEl.textContent = s;
       if (s > state.best) {
@@ -93,6 +105,11 @@ function ensureWorld() {
       gameOverModal.hidden = false;
       sfx.gameOver();
       refreshHomeBests();
+      // ドクロモード で 規定スコア未満 → ホラー演出
+      if (m && m.horrorThreshold && s < m.horrorThreshold) {
+        horrorScore.textContent = `SCORE ${s}`;
+        horrorOverlay.hidden = false;
+      }
     },
   });
   return world;
@@ -104,26 +121,27 @@ function startMode(modeKey) {
   currentMode = modeKey;
   unlockAudio();
 
-  // キャンバスを モードサイズに 切替
-  canvas.style.aspectRatio = `${m.width} / ${m.height}`;
-  canvas.style.maxWidth = `${m.width}px`;
-  setupCanvas(canvas, m.width, m.height);
-  cursorX = m.width / 2;
+  // キャンバスは 全モード 共通サイズ ( 旧ハード )
+  canvas.style.aspectRatio = `${BOX_W} / ${BOX_H}`;
+  canvas.style.maxWidth = `${BOX_W}px`;
+  setupCanvas(canvas, BOX_W, BOX_H);
+  cursorX = BOX_W / 2;
 
-  // ワールドを そのサイズに
   ensureWorld();
-  world.w = m.width;
-  world.h = m.height;
-  world.dangerY = m.dangerY;
+  world.w = BOX_W;
+  world.h = BOX_H;
+  world.dangerY = DANGER_Y;
   world.reset();
 
   homeOverlay.hidden = true;
   gameOverModal.hidden = true;
+  horrorOverlay.hidden = true;
   scoreEl.textContent = "0";
 
   nextTier = pickDropTier();
   pendingTier = pickDropTier();
   dropCooldown = 0;
+  dropTimer = m.dropLimit;
   drawNext();
 
   if (!loopStarted) {
@@ -135,6 +153,7 @@ function startMode(modeKey) {
 
 function returnToMenu() {
   gameOverModal.hidden = true;
+  horrorOverlay.hidden = true;
   homeOverlay.hidden = false;
   if (world) world.reset();
   refreshHomeBests();
@@ -143,6 +162,7 @@ function returnToMenu() {
 function refreshHomeBests() {
   bestNormalLabel.textContent = `ベスト ${state.bestNormal || 0}`;
   bestHardLabel.textContent = `ベスト ${state.bestHard || 0}`;
+  bestSkullLabel.textContent = `ベスト ${state.bestSkull || 0}`;
 }
 
 function buildEvolutionList() {
@@ -221,6 +241,9 @@ function dropApple() {
   nextTier = pendingTier;
   pendingTier = pickDropTier();
   dropCooldown = DROP_COOLDOWN;
+  // タイマーを 次の りんごの 制限時間で 再セット
+  const m = currentMode ? MODES[currentMode] : null;
+  dropTimer = m ? m.dropLimit : Infinity;
   drawNext();
 }
 
@@ -244,6 +267,30 @@ function drawCursor() {
   ctx.restore();
 
   drawApple(ctx, x, y, r, tier, { opacity: dropCooldown > 0 ? 0.25 : 0.65 });
+
+  // 制限時間の カウントダウン リング ( ハード / ドクロ )
+  const m = currentMode ? MODES[currentMode] : null;
+  if (m && Number.isFinite(m.dropLimit) && dropCooldown === 0) {
+    const ratio = Math.max(0, dropTimer / m.dropLimit);
+    const ringR = r + 8;
+    ctx.save();
+    // 残り時間が 少ないと 赤
+    const urgent = ratio < 0.35;
+    ctx.strokeStyle = urgent ? "#ff3838" : (currentMode === "skull" ? "#ff5fa2" : "#c0271e");
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(x, y, ringR, -Math.PI / 2, -Math.PI / 2 + ratio * Math.PI * 2);
+    ctx.stroke();
+    if (urgent) {
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.arc(x, y, ringR, -Math.PI / 2, -Math.PI / 2 + ratio * Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
 }
 
 function drawNext() {
@@ -256,6 +303,13 @@ function loop(now) {
   const dt = Math.min(0.05, (now - lastFrame) / 1000);
   lastFrame = now;
   if (dropCooldown > 0) dropCooldown = Math.max(0, dropCooldown - dt);
+
+  // モード制限時間: クールダウンが 終わってる + ゲームオーバーでない 時に カウント
+  if (world && !world.gameOver && dropCooldown === 0 && Number.isFinite(dropTimer)) {
+    dropTimer = Math.max(0, dropTimer - dt);
+    if (dropTimer === 0) dropApple();
+  }
+
   if (world) {
     world.step(dt);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -278,6 +332,14 @@ restartBtn.addEventListener("click", () => {
 
 menuBtn.addEventListener("click", () => {
   returnToMenu();
+});
+
+horrorCloseBtn.addEventListener("click", () => {
+  horrorOverlay.hidden = true;
+});
+
+horrorOverlay.addEventListener("click", (e) => {
+  if (e.target === horrorOverlay) horrorOverlay.hidden = true;
 });
 
 soundBtn.addEventListener("click", () => {
