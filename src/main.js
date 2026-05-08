@@ -335,6 +335,31 @@ menuBtn.addEventListener("click", () => {
   returnToMenu();
 });
 
+// 動画音声を Web Audio で 増幅 ( ブラウザ仕様上、OS の 音量を 直接
+// 操作する API は 存在しないため、GainNode で ハードウェア出力上限まで 押し上げる )。
+const VIDEO_GAIN = 4.0;
+let videoAudioCtx = null;
+let videoSourceNode = null;
+let videoGainNode = null;
+
+function boostVideoVolume() {
+  if (!horrorVideo) return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!videoAudioCtx) videoAudioCtx = new AC();
+    if (videoAudioCtx.state === "suspended") videoAudioCtx.resume().catch(() => {});
+    if (!videoSourceNode) {
+      videoSourceNode = videoAudioCtx.createMediaElementSource(horrorVideo);
+      videoGainNode = videoAudioCtx.createGain();
+      videoGainNode.gain.value = VIDEO_GAIN;
+      videoSourceNode.connect(videoGainNode).connect(videoAudioCtx.destination);
+    } else if (videoGainNode) {
+      videoGainNode.gain.value = VIDEO_GAIN;
+    }
+  } catch { /* ignore - フォールバックは video.volume = 1.0 */ }
+}
+
 function showHorror() {
   horrorOverlay.hidden = false;
   if (horrorVideo) {
@@ -343,10 +368,11 @@ function showHorror() {
       horrorVideo.muted = false;
       horrorVideo.volume = 1.0;
       horrorVideo.currentTime = 0;
+      boostVideoVolume();
       const p = horrorVideo.play();
       if (p && typeof p.catch === "function") {
-        // 自動再生が ブラウザに 拒否された 場合は ミュートで リトライ
         p.catch(() => {
+          // 自動再生が ブラウザに 拒否された場合は ミュートで リトライ
           horrorVideo.muted = true;
           horrorVideo.play().catch(() => {});
         });
@@ -357,7 +383,10 @@ function showHorror() {
                   horrorOverlay.webkitRequestFullscreen ||
                   horrorOverlay.msRequestFullscreen;
     if (reqFs) {
-      try { reqFs.call(horrorOverlay).catch(() => {}); } catch { /* ignore */ }
+      try {
+        const r = reqFs.call(horrorOverlay);
+        if (r && typeof r.catch === "function") r.catch(() => {});
+      } catch { /* ignore */ }
     }
   }
 }
@@ -373,15 +402,24 @@ function closeHorror() {
                  document.webkitExitFullscreen ||
                  document.msExitFullscreen;
   if (exitFs && document.fullscreenElement) {
-    try { exitFs.call(document).catch(() => {}); } catch { /* ignore */ }
+    try {
+      const r = exitFs.call(document);
+      if (r && typeof r.catch === "function") r.catch(() => {});
+    } catch { /* ignore */ }
   }
 }
 
-horrorCloseBtn.addEventListener("click", closeHorror);
-
-horrorOverlay.addEventListener("click", (e) => {
-  if (e.target === horrorOverlay || e.target === horrorVideo) closeHorror();
+horrorCloseBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  closeHorror();
 });
+
+// オーバーレイ内なら どこを タップしても 閉じる ( クローズボタン以外 )
+horrorOverlay.addEventListener("click", () => closeHorror());
+horrorOverlay.addEventListener("touchend", (e) => {
+  if (e.cancelable) e.preventDefault();
+  closeHorror();
+}, { passive: false });
 
 soundBtn.addEventListener("click", () => {
   state = saveState({ sound: !state.sound });
@@ -391,11 +429,13 @@ soundBtn.addEventListener("click", () => {
 });
 
 window.addEventListener("keydown", (e) => {
-  if (e.key === "r" || e.key === "R") {
-    if (!gameOverModal.hidden) restartBtn.click();
-  }
   if (e.key === "Escape") {
-    if (!gameOverModal.hidden) menuBtn.click();
+    if (!horrorOverlay.hidden) { closeHorror(); return; }
+    if (!gameOverModal.hidden) { menuBtn.click(); return; }
+  }
+  if (e.key === "r" || e.key === "R") {
+    if (!horrorOverlay.hidden) return;
+    if (!gameOverModal.hidden) restartBtn.click();
   }
 });
 

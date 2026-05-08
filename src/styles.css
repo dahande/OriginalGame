@@ -600,6 +600,9 @@ body {
 .horror-overlay {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   z-index: 50;
   background: #000;
   display: flex;
@@ -609,10 +612,14 @@ body {
   gap: 18px;
   animation: horrorEnter 0.18s steps(2) forwards;
   overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .horror-overlay:fullscreen {
   background: #000;
+  width: 100vw;
+  height: 100vh;
 }
 
 .horror-video {
@@ -623,6 +630,7 @@ body {
   object-fit: contain;
   background: #000;
   z-index: 0;
+  pointer-events: none;
 }
 
 .horror-overlay[hidden] { display: none; }
@@ -673,11 +681,38 @@ body {
 
 .horror-overlay.has-video .horror-content {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 2;
+  top: max(20px, calc(env(safe-area-inset-top, 0px) + 12px));
+  right: max(20px, calc(env(safe-area-inset-right, 0px) + 12px));
+  z-index: 10;
   padding: 0;
   animation: none;
+  pointer-events: none;
+}
+
+.horror-overlay.has-video .horror-close {
+  pointer-events: auto;
+}
+
+.horror-tap-hint {
+  position: absolute;
+  bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  color: rgba(255, 220, 220, 0.7);
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  font-weight: 700;
+  pointer-events: none;
+  animation: horrorBlink 1.4s steps(2) infinite;
+  text-shadow: 0 0 10px rgba(255, 60, 60, 0.6);
+}
+
+.horror-overlay:not(.has-video) .horror-tap-hint { display: none; }
+
+@keyframes horrorBlink {
+  0%, 100% { opacity: 0.95; }
+  50%      { opacity: 0.35; }
 }
 
 @keyframes horrorShake {
@@ -743,24 +778,33 @@ body {
   margin-top: 16px;
   background: linear-gradient(180deg, #2a0010, #6b0010);
   color: #fff;
-  border: 1px solid rgba(255, 80, 80, 0.4);
-  border-radius: 12px;
-  padding: 12px 28px;
+  border: 1px solid rgba(255, 80, 80, 0.5);
+  border-radius: 14px;
+  padding: 14px 30px;
   font-size: 16px;
   font-weight: 800;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   cursor: pointer;
   font-family: inherit;
-  box-shadow: 0 0 24px rgba(255, 30, 30, 0.4);
-  transition: filter 0.2s ease;
+  box-shadow: 0 0 28px rgba(255, 30, 30, 0.55), 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: filter 0.2s ease, transform 0.15s ease;
+  min-width: 88px;
+  min-height: 44px;
 }
-.horror-close:hover { filter: brightness(1.2); }
+.horror-close:hover { filter: brightness(1.25); }
+.horror-close:active { transform: scale(0.96); }
 
 @media (max-width: 480px) {
   .horror-skull { font-size: 140px; }
   .horror-line-1 { font-size: 26px; }
   .horror-line-2 { font-size: 38px; }
   .horror-line-3 { font-size: 16px; }
+  .horror-close {
+    padding: 16px 26px;
+    font-size: 17px;
+    min-height: 52px;
+  }
+  .horror-tap-hint { font-size: 11px; }
 }
 
 @media (max-width: 640px) {
