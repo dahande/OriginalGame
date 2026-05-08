@@ -429,6 +429,9 @@ body {
   background:
     radial-gradient(900px 500px at 50% 0%, #ffe1a8 0%, transparent 70%),
     linear-gradient(180deg, rgba(255, 242, 212, 0.96) 0%, rgba(253, 226, 177, 0.96) 100%);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: auto;
 }
 
 .home-panel {
@@ -825,6 +828,15 @@ body {
   .evo-row { gap: 6px; padding: 2px 4px; font-size: 11px; }
   .evo-name { font-size: 11px; }
   .evo-dot { width: 14px; height: 14px; flex-basis: 14px; }
+    .overlay-home {
+    align-items: flex-start;
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .home-panel {
+    width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
