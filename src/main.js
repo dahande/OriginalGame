@@ -31,6 +31,7 @@ const homeOverlay = $("homeOverlay");
 const gameOverModal = $("gameOverModal");
 const finalScoreEl = $("finalScore");
 const recordLine = $("recordLine");
+const currentModeName = $("currentModeName");
 const bestTierName = $("bestTierName");
 const restartBtn = $("restartBtn");
 const menuBtn = $("menuBtn");
@@ -95,8 +96,9 @@ function ensureWorld() {
     },
     onGameOver: (s) => {
       finalScoreEl.textContent = s;
-      bestTierName.textContent = TIERS[world.bestTierReached].name;
       const m = MODES[currentMode];
+      currentModeName.textContent = m ? m.name : "ふつう";
+      bestTierName.textContent = TIERS[world.bestTierReached].name;
       const modeBest = m ? state[m.bestKey] || 0 : state.best;
       if (s > 0 && s >= modeBest) {
         recordLine.textContent = "新記録 達成!";
@@ -108,7 +110,7 @@ function ensureWorld() {
       refreshHomeBests();
       // ドクロモード で 規定スコア未満 → ホラー演出
       if (m && m.horrorThreshold && s < m.horrorThreshold) {
-        horrorScore.textContent = `SCORE ${s}`;
+        horrorScore.textContent = `${m.name} - SCORE ${s}`;
         showHorror();
       }
     },
@@ -163,7 +165,7 @@ function returnToMenu() {
 
 function refreshHomeBests() {
   bestNormalLabel.textContent = `ベスト ${state.bestNormal || 0}`;
-  bestHardLabel.textContent = `ベスト ${state.bestHard || 0}`;
+  if (bestHardLabel) bestHardLabel.textContent = `ベスト ${state.bestHard || 0}`;
   bestSkullLabel.textContent = `ベスト ${state.bestSkull || 0}`;
 }
 
