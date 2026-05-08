@@ -158,7 +158,7 @@ let bgmNextTime = 0;
 let bgmStep = 0;
 let bgmTimer = 0;
 
-const BGM_BPM = 78;
+const BGM_BPM = 128;
 const BGM_BEAT = 60 / BGM_BPM;
 const BGM_STEP = BGM_BEAT / 2;          // 8 分音符
 const BGM_STEPS_PER_CHORD = 8;          // 1 小節 / コード
@@ -208,32 +208,129 @@ function bgmHat(time, vol = 0.04) {
   src.start(time);
 }
 
+function edmKick(time, vol = 0.9) {
+  const c = ensureCtx();
+  if (!c || !bgmGain) return;
+
+  const osc = c.createOscillator();
+  const g = c.createGain();
+
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(140, time);
+  osc.frequency.exponentialRampToValueAtTime(42, time + 0.12);
+
+  g.gain.setValueAtTime(vol, time);
+  g.gain.exponentialRampToValueAtTime(0.0001, time + 0.12);
+
+  osc.connect(g).connect(bgmGain);
+
+  osc.start(time);
+  osc.stop(time + 0.15);
+}
+
+function edmClap(time, vol = 0.22) {
+  const c = ensureCtx();
+  if (!c || !bgmGain) return;
+
+  const dur = 0.18;
+  const len = Math.floor(c.sampleRate * dur);
+
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const data = buf.getChannelData(0);
+
+  for (let i = 0; i < len; i++) {
+    data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  }
+
+  const src = c.createBufferSource();
+  src.buffer = buf;
+
+  const bp = c.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = 1800;
+  bp.Q.value = 0.7;
+
+  const g = c.createGain();
+  g.gain.setValueAtTime(vol, time);
+  g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+
+  src.connect(bp).connect(g).connect(bgmGain);
+  src.start(time);
+}
+
+function supersaw(freq, dur, vol, time) {
+  const c = ensureCtx();
+  if (!c || !bgmGain) return;
+
+  const detunes = [-18, -9, 0, 9, 18];
+
+  detunes.forEach((det) => {
+    const osc = c.createOscillator();
+    const g = c.createGain();
+
+    osc.type = "sawtooth";
+    osc.frequency.value = freq;
+    osc.detune.value = det;
+
+    g.gain.setValueAtTime(0, time);
+    g.gain.linearRampToValueAtTime(vol / detunes.length, time + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+
+    osc.connect(g).connect(bgmGain);
+
+    osc.start(time);
+    osc.stop(time + dur + 0.05);
+  });
+}
+
 function scheduleBgmStep(globalStep, time) {
   const chordIdx = Math.floor(globalStep / BGM_STEPS_PER_CHORD) % BGM_CHORDS.length;
   const stepInChord = globalStep % BGM_STEPS_PER_CHORD;
   const chord = BGM_CHORDS[chordIdx];
   const [root, third, fifth] = chord;
 
-  // ベース ( 1 小節の 1, 5 拍 )
-  if (stepInChord === 0) bgmTone(root / 2, "triangle", BGM_BEAT * 1.4, 0.18, time);
-  if (stepInChord === 4) bgmTone(fifth / 2, "triangle", BGM_BEAT * 0.9, 0.13, time);
-
-  // パッド ( 1 小節の 0 ステップ で コード全部を ロング サスティン )
-  if (stepInChord === 0) {
-    const padDur = BGM_BEAT * 3.6;
-    bgmTone(root,  "sine", padDur, 0.06, time);
-    bgmTone(third, "sine", padDur, 0.045, time);
-    bgmTone(fifth, "sine", padDur, 0.045, time);
+  // サイドチェイン風
+  if (bgmGain) {
+    bgmGain.gain.cancelScheduledValues(time);
+    bgmGain.gain.setValueAtTime(0.22, time);
+    bgmGain.gain.linearRampToValueAtTime(0.45, time + 0.15);
   }
 
-  // アルペジオ ( 8 分の 各ステップ )
-  const arpPattern = [0, 2, 1, 2, 0, 2, 1, 2];   // chord index 0/1/2
-  const arpNote = chord[arpPattern[stepInChord]] * 2;  // 1 オクターブ上
-  bgmTone(arpNote, "triangle", BGM_STEP * 1.6, 0.05, time + 0.005);
+  // 4 つ打ちキック
+  if (stepInChord % 2 === 0) {
+    edmKick(time);
+  }
 
-  // 軽い ハイハット 風
-  if (stepInChord === 2 || stepInChord === 6) bgmHat(time);
+  // Clap
+  if (stepInChord === 2 || stepInChord === 6) {
+    edmClap(time);
+  }
+
+  // Hat
+  bgmHat(time + 0.03, 0.03);
+
+  // ベース
+  bgmTone(root / 2, "sawtooth", BGM_STEP * 0.9, 0.12, time);
+
+  // Supersaw コード
+  if (stepInChord === 0) {
+    const dur = BGM_BEAT * 3.8;
+    supersaw(root, dur, 0.08, time);
+    supersaw(third, dur, 0.06, time);
+    supersaw(fifth, dur, 0.06, time);
+  }
+
+  // アルペジオ
+  const arp = [root * 2, fifth * 2, third * 2];
+  bgmTone(arp[stepInChord % arp.length], "triangle", BGM_STEP * 0.8, 0.04, time);
+
+  if (bgmFilter) {
+    bgmFilter.frequency.cancelScheduledValues(time);
+    bgmFilter.frequency.setValueAtTime(3200, time);
+    bgmFilter.frequency.linearRampToValueAtTime(8000, time + 4);
+  }
 }
+
 
 function scheduleBgm() {
   if (!bgmStarted) return;
