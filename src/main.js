@@ -42,6 +42,7 @@ const bestSkullLabel = $("bestSkullLabel");
 const horrorOverlay = $("horrorOverlay");
 const horrorCloseBtn = $("horrorCloseBtn");
 const horrorScore = $("horrorScore");
+const horrorVideo = $("horrorVideo");
 
 let state = loadState();
 
@@ -108,7 +109,7 @@ function ensureWorld() {
       // ドクロモード で 規定スコア未満 → ホラー演出
       if (m && m.horrorThreshold && s < m.horrorThreshold) {
         horrorScore.textContent = `SCORE ${s}`;
-        horrorOverlay.hidden = false;
+        showHorror();
       }
     },
   });
@@ -135,7 +136,7 @@ function startMode(modeKey) {
 
   homeOverlay.hidden = true;
   gameOverModal.hidden = true;
-  horrorOverlay.hidden = true;
+  closeHorror();
   scoreEl.textContent = "0";
 
   nextTier = pickDropTier();
@@ -153,7 +154,7 @@ function startMode(modeKey) {
 
 function returnToMenu() {
   gameOverModal.hidden = true;
-  horrorOverlay.hidden = true;
+  closeHorror();
   homeOverlay.hidden = false;
   if (world) world.reset();
   refreshHomeBests();
@@ -334,12 +335,52 @@ menuBtn.addEventListener("click", () => {
   returnToMenu();
 });
 
-horrorCloseBtn.addEventListener("click", () => {
+function showHorror() {
+  horrorOverlay.hidden = false;
+  if (horrorVideo) {
+    horrorOverlay.classList.add("has-video");
+    try {
+      horrorVideo.muted = false;
+      horrorVideo.volume = 1.0;
+      horrorVideo.currentTime = 0;
+      const p = horrorVideo.play();
+      if (p && typeof p.catch === "function") {
+        // 自動再生が ブラウザに 拒否された 場合は ミュートで リトライ
+        p.catch(() => {
+          horrorVideo.muted = true;
+          horrorVideo.play().catch(() => {});
+        });
+      }
+    } catch { /* ignore */ }
+    // フルスクリーン要求 ( 失敗しても overlay 自体が 100vw/vh )
+    const reqFs = horrorOverlay.requestFullscreen ||
+                  horrorOverlay.webkitRequestFullscreen ||
+                  horrorOverlay.msRequestFullscreen;
+    if (reqFs) {
+      try { reqFs.call(horrorOverlay).catch(() => {}); } catch { /* ignore */ }
+    }
+  }
+}
+
+function closeHorror() {
+  if (horrorVideo) {
+    horrorVideo.pause();
+    horrorVideo.currentTime = 0;
+  }
+  horrorOverlay.classList.remove("has-video");
   horrorOverlay.hidden = true;
-});
+  const exitFs = document.exitFullscreen ||
+                 document.webkitExitFullscreen ||
+                 document.msExitFullscreen;
+  if (exitFs && document.fullscreenElement) {
+    try { exitFs.call(document).catch(() => {}); } catch { /* ignore */ }
+  }
+}
+
+horrorCloseBtn.addEventListener("click", closeHorror);
 
 horrorOverlay.addEventListener("click", (e) => {
-  if (e.target === horrorOverlay) horrorOverlay.hidden = true;
+  if (e.target === horrorOverlay || e.target === horrorVideo) closeHorror();
 });
 
 soundBtn.addEventListener("click", () => {
