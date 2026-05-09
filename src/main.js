@@ -137,6 +137,7 @@ function ensureWorld() {
         recordLine.textContent = `ベスト: ${modeBest}`;
       }
       gameOverModal.hidden = false;
+      submitted = false; // ランキング送信フラグをリセット
       sfx.gameOver();
       // キャッシュから即座にランキングを表示（Firestore アクセスなし）
       const cachedTop30 = getCachedRanking(30);
@@ -484,39 +485,60 @@ soundBtn.addEventListener("click", () => {
   soundBtn.classList.toggle("muted", !state.sound);
 });
 
+let submitted = false;
+
 submitRankBtn.addEventListener("click", async () => {
+  if (submitted) return;
+
   const currentScore = world ? world.score : 0;
   const playerName = playerNameInput.value.trim();
+
+  if (!playerName) {
+  rankSubmitStatus.textContent = "名前を入力してください";
+  submitted = false;
+  submitRankBtn.disabled = false;
+  return;
+  }
+
+  // 重複送信チェック
+  const submittedKey =
+    localStorage.getItem("lastSubmittedScore");
+
+  if (submittedKey === `${currentMode}_${currentScore}`) {
+    rankSubmitStatus.textContent =
+      "このスコアは既に送信済みです。";
+    return;
+  }
+
+  submitted = true;
+
   rankSubmitStatus.textContent = "送信中...";
   submitRankBtn.disabled = true;
 
-  console.log("[submitRankBtn] Submitting score:", { playerName, currentScore, currentMode });
-
   try {
+
     if (!currentScore || currentScore <= 0) {
-      throw new Error("スコアがありません。");
+      throw new Error("スコアがありません");
     }
 
-    // optimistic update: 送信前に UI に反映
-    console.log("[submitRankBtn] Optimistic update: adding to cache");
-    optimisticUpdate(playerName, currentScore, currentMode);
-    const cachedTop30 = getCachedRanking(30);
-    renderRanking(cachedTop30);
-
-    // Realtime Database に送信
     await submitScore(playerName, currentScore, currentMode);
-    rankSubmitStatus.textContent = "✓ 送信完了しました！";
-    submitRankBtn.disabled = false;
 
-    // 送信後だけ再同期（バックグラウンド）
-    console.log("[submitRankBtn] Refreshing ranking after submit...");
-    refreshRankingAfterSubmit().catch((err) => {
-      console.error("Ranking refresh error:", err);
-      rankSubmitStatus.textContent = "※ 最新化に失敗しましたが、スコアは送信されました。";
-    });
+    // 保存
+    localStorage.setItem(
+      "lastSubmittedScore",
+      `${currentMode}_${currentScore}`
+    );
+
+    rankSubmitStatus.textContent =
+      "✓ 送信完了しました！";
+
   } catch (error) {
-    console.error("[submitRankBtn] Error:", error);
-    rankSubmitStatus.textContent = error.message || "送信に失敗しました。";
+    console.error(error);
+
+    rankSubmitStatus.textContent =
+      "送信失敗";
+
+    submitted = false;
     submitRankBtn.disabled = false;
   }
 });
