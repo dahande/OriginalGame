@@ -276,12 +276,5 @@
 
   <script type="module" src="./ranking.js"></script>
   <script type="module" src="src/main.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(err => {
-        console.error('Service Worker 登録エラー:', err);
-      });
-    }
-  </script>
 </body>
 </html>

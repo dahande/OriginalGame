@@ -1,16 +1,16 @@
 const CACHE_NAME = 'aomori-apple-v1';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/og-image.png',
-  '/src/main.js',
-  '/src/apple.js',
-  '/src/audio.js',
-  '/src/world.js',
-  '/src/storage.js',
-  '/src/particles.js',
-  '/src/styles.css',
+  './',
+  './index.html',
+  './manifest.json',
+  './og-image.png',
+  './src/main.js',
+  './src/apple.js',
+  './src/audio.js',
+  './src/world.js',
+  './src/storage.js',
+  './src/particles.js',
+  './src/styles.css',
 ];
 
 self.addEventListener('install', (event) => {
