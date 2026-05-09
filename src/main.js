@@ -602,15 +602,8 @@ buildEvolutionList();
 refreshHomeBests();
 drawNext();
 
-function initHomeRanking() {
-  if (document.readyState === "loading") {
-    window.addEventListener("DOMContentLoaded", () => loadHomeRanking());
-  } else {
-    loadHomeRanking();
-  }
-}
-
-initHomeRanking();
+// ページを開いた瞬間にホームランキングを読み込む
+loadHomeRanking();
 
 // Realtime Database の変更を監視し、キャッシュと表示を自動更新
 listenRanking((data) => {
