@@ -999,7 +999,7 @@ body {
     display: inline;
   }
   .home-title {
-    max-width: calc(100% - 72px);
+    max-width: auto;
     word-break: break-word;
   }
 }
