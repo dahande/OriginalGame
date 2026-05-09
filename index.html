@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-C9RC8XG8BZ"></script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-BCG25KYSCK"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'G-C9RC8XG8BZ');
+    gtag('config', 'G-BCG25KYSCK');
   </script>
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
@@ -202,6 +202,16 @@
       </div>
 
       <p class="home-footnote">マウス / タップで バブルを 落とす<br/>ラインを 越え続けると ゲームオーバー</p>
+      <div class="ranking-panel home-ranking-panel">
+        <div class="ranking-actions">
+          <span>ホームランキング</span>
+          <span class="ranking-status" id="homeRankingStatus"></span>
+        </div>
+        <div class="ranking-list home-ranking-list" id="homeRankingList" aria-live="polite">
+          <div class="ranking-caption">TOP 10</div>
+          <ol id="homeRankingEntries"></ol>
+        </div>
+      </div>
     </div>
   </div>
 

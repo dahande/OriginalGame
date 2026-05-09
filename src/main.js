@@ -62,6 +62,8 @@ const submitRankBtn = $("submitRankBtn");
 const rankSubmitStatus = $("rankSubmitStatus");
 const rankingEntries = $("rankingEntries");
 const rankingList = $("rankingList");
+const homeRankingStatus = $("homeRankingStatus");
+const homeRankingEntries = $("homeRankingEntries");
 const horrorOverlay = $("horrorOverlay");
 const horrorCloseBtn = $("horrorCloseBtn");
 const horrorScore = $("horrorScore");
@@ -129,6 +131,7 @@ function ensureWorld() {
       }
       gameOverModal.hidden = false;
       sfx.gameOver();
+      refreshRanking().catch(() => {});
       refreshHomeBests();
       // ドクロモード で 規定スコア未満 → ホラー演出
       if (m && m.horrorThreshold && s < m.horrorThreshold) {
@@ -193,6 +196,7 @@ function returnToMenu() {
   submitRankBtn.disabled = false;
   if (world) world.reset();
   refreshHomeBests();
+  refreshHomeRanking();
 }
 
 function refreshHomeBests() {
@@ -480,18 +484,19 @@ submitRankBtn.addEventListener("click", async () => {
       throw new Error("スコアがありません。");
     }
     await submitScore(playerName, currentScore, currentMode);
-    rankSubmitStatus.textContent = "送信しました。TOP 100 を更新中です。";
-    await refreshRanking();
+    rankSubmitStatus.textContent = "送信しました。ランキングを更新中です。";
+    submitRankBtn.disabled = false;
+    refreshRanking().catch(() => {});
   } catch (error) {
     rankSubmitStatus.textContent = error.message || "送信に失敗しました。";
     submitRankBtn.disabled = false;
   }
 });
 
-async function renderRanking(list) {
-  rankingEntries.innerHTML = "";
+function renderRankingEntries(list, container) {
+  container.innerHTML = "";
   if (!list || list.length === 0) {
-    rankingEntries.innerHTML = '<li class="ranking-empty">ランキングデータがありません。</li>';
+    container.innerHTML = '<li class="ranking-empty">ランキングデータがありません。</li>';
     return;
   }
 
@@ -503,8 +508,26 @@ async function renderRanking(list) {
       <span class="ranking-name">${escapeHtml(entry.name)}</span>
       <span class="ranking-score">${entry.score}</span>
     `;
-    rankingEntries.appendChild(li);
+    container.appendChild(li);
   });
+}
+
+async function renderRanking(list) {
+  renderRankingEntries(list, rankingEntries);
+}
+
+async function refreshHomeRanking(mode = null, limitCount = 10) {
+  if (!homeRankingEntries) return;
+  homeRankingStatus.textContent = "ランキングを表示中...";
+
+  try {
+    const entries = await loadRanking(mode, limitCount);
+    renderRankingEntries(entries, homeRankingEntries);
+    homeRankingStatus.textContent = "";
+  } catch (error) {
+    homeRankingEntries.innerHTML = '<li class="ranking-empty">ランキングの読み込みに失敗しました。</li>';
+    homeRankingStatus.textContent = "読み込みに失敗しました。";
+  }
 }
 
 async function refreshRanking() {
@@ -551,6 +574,7 @@ bgm.setEnabled(state.sound);
 soundBtn.classList.toggle("muted", !state.sound);
 buildEvolutionList();
 refreshHomeBests();
+refreshHomeRanking();
 drawNext();
 
 function lightenHex(hex, amt) { return mixHex(hex, "#ffffff", amt); }
