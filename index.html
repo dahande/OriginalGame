@@ -177,6 +177,17 @@
       </div>
       <p class="home-desc">同じ品種を 合体させて<br/><strong>世界一</strong> を 目指そう</p>
 
+      <div class="ranking-panel home-ranking-panel">
+        <div class="ranking-actions">
+          <span>ホームランキング</span>
+          <span class="ranking-status" id="homeRankingStatus"></span>
+        </div>
+        <div class="ranking-list home-ranking-list" id="homeRankingList" aria-live="polite">
+          <div class="ranking-caption">TOP 10</div>
+          <ol id="homeRankingEntries"></ol>
+        </div>
+      </div>
+
       <h2 class="home-modes-title">モードを 選択</h2>
       <div class="mode-grid">
         <button class="mode-btn mode-normal" data-mode="normal" type="button">
@@ -202,16 +213,6 @@
       </div>
 
       <p class="home-footnote">マウス / タップで バブルを 落とす<br/>ラインを 越え続けると ゲームオーバー</p>
-      <div class="ranking-panel home-ranking-panel">
-        <div class="ranking-actions">
-          <span>ホームランキング</span>
-          <span class="ranking-status" id="homeRankingStatus"></span>
-        </div>
-        <div class="ranking-list home-ranking-list" id="homeRankingList" aria-live="polite">
-          <div class="ranking-caption">TOP 10</div>
-          <ol id="homeRankingEntries"></ol>
-        </div>
-      </div>
     </div>
   </div>
 
