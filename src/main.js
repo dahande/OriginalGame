@@ -617,6 +617,37 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
+// ハンバーガーメニューの処理
+const hamburgerBtn = $("hamburgerBtn");
+const gameMenu = $("gameMenu");
+const backToHomeBtn = $("backToHomeBtn");
+const resumeGameBtn = $("resumeGameBtn");
+
+hamburgerBtn.addEventListener("click", () => {
+  const isHidden = gameMenu.hidden;
+  gameMenu.hidden = !isHidden;
+  hamburgerBtn.setAttribute("aria-expanded", !isHidden);
+});
+
+backToHomeBtn.addEventListener("click", () => {
+  gameMenu.hidden = true;
+  hamburgerBtn.setAttribute("aria-expanded", "false");
+  homeOverlay.hidden = false;
+});
+
+resumeGameBtn.addEventListener("click", () => {
+  gameMenu.hidden = true;
+  hamburgerBtn.setAttribute("aria-expanded", "false");
+});
+
+// メニュー外をクリックしたら閉じる
+document.addEventListener("click", (e) => {
+  if (!gameMenu.hidden && !gameMenu.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+    gameMenu.hidden = true;
+    hamburgerBtn.setAttribute("aria-expanded", "false");
+  }
+});
+
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) unlockAudio();
 });

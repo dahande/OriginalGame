@@ -4,14 +4,16 @@
   "description": "青森のりんご合体パズルゲーム",
   "start_url": ".",
   "scope": ".",
-  "display": "browser",
+  "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#fde7c2",
   "theme_color": "#c0271e",
   "icons": [
     {
       "src": "og-image.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "sizes": "192x192 256x256 384x384 512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
