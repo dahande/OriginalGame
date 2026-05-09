@@ -1,19 +1,21 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
 import {
-  getFirestore,
-  collection,
-  addDoc,
+  getDatabase,
+  ref,
+  push,
+  set,
+  get,
   query,
-  orderBy,
-  limit,
-  getDocs,
-  where,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+  orderByChild,
+  limitToLast,
+  serverTimestamp,
+  onValue,
+} from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAeHw_31_xYD7d9lVSCu9cEgZ4MOer1IiA",
   authDomain: "aomoriapple-48db3.firebaseapp.com",
+  databaseURL: "https://aomoriapple-48db3-default-rtdb.firebaseio.com",
   projectId: "aomoriapple-48db3",
   storageBucket: "aomoriapple-48db3.firebasestorage.app",
   messagingSenderId: "763922739575",
@@ -21,7 +23,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db = getDatabase(app);
 
 const MAX_SCORE = 1000000;
 const ALLOWED_MODES = ["normal", "hard", "skull"];
@@ -29,22 +31,27 @@ const ALLOWED_MODES = ["normal", "hard", "skull"];
 // メモリ保持用ランキング
 let cachedRanking = [];
 
+function normalizeRankingSnapshot(snapshot) {
+  const value = snapshot.val();
+  if (!value) return [];
+  const list = Object.entries(value).map(([id, item]) => ({ id, ...item }));
+  return list.sort((a, b) => b.score - a.score);
+}
+
+function scoresRef(mode = null) {
+  return ref(db, mode && ALLOWED_MODES.includes(mode) ? `scores/${mode}` : "scores/all");
+}
+
 /**
  * ゲーム起動時に呼ぶ。
- * Firestore から TOP 100 を先読みしてメモリに保持。
+ * Realtime Database から TOP 100 を先読みしてメモリに保持。
  */
-export async function preloadRanking() {
+export async function preloadRanking(limitCount = 100) {
   try {
-    const q = query(
-      collection(db, "scores"),
-      orderBy("score", "desc"),
-      limit(100)
-    );
-    const snap = await getDocs(q);
-    cachedRanking = snap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const q = query(scoresRef(), orderByChild("score"), limitToLast(limitCount));
+    const snap = await get(q);
+    const result = normalizeRankingSnapshot(snap).slice(0, limitCount);
+    cachedRanking = result;
     console.log("[preloadRanking] Loaded", cachedRanking.length, "entries");
     return cachedRanking;
   } catch (error) {
@@ -55,10 +62,29 @@ export async function preloadRanking() {
 }
 
 /**
- * キャッシュをそのまま返す。Firestore アクセスなし。
+ * Realtime Database の値変更をリアルタイムで受け取る。
  */
-export function getCachedRanking(limitCount = 100) {
-  return cachedRanking.slice(0, limitCount);
+export function listenRanking(onUpdate, limitCount = 100) {
+  const q = query(scoresRef(), orderByChild("score"), limitToLast(limitCount));
+  const unsubscribe = onValue(q, (snap) => {
+    const result = normalizeRankingSnapshot(snap).slice(0, limitCount);
+    cachedRanking = result;
+    console.log("[listenRanking] Updated", cachedRanking.length, "entries");
+    if (typeof onUpdate === "function") {
+      onUpdate(result);
+    }
+  });
+  return unsubscribe;
+}
+
+/**
+ * キャッシュをそのまま返す。Realtime Database アクセスなし。
+ */
+export function getCachedRanking(limitCount = 100, mode = null) {
+  const list = mode && ALLOWED_MODES.includes(mode)
+    ? cachedRanking.filter((entry) => entry.mode === mode)
+    : cachedRanking;
+  return list.slice(0, limitCount);
 }
 
 /**
@@ -70,17 +96,14 @@ export function optimisticUpdate(name, score, mode) {
     name,
     score,
     mode: safeMode,
-    createdAt: new Date(),
+    createdAt: Date.now(),
   });
-  // 101件目以降は削除して最新 100 件のみ保持
-  if (cachedRanking.length > 100) {
-    cachedRanking = cachedRanking.slice(0, 100);
-  }
+  if (cachedRanking.length > 100) cachedRanking = cachedRanking.slice(0, 100);
   console.log("[optimisticUpdate] Added to cache, now", cachedRanking.length, "entries");
 }
 
 /**
- * Firestore に送信。
+ * Realtime Database に送信。
  */
 export async function submitScore(name, score, mode) {
   const cleanedName = String(name || "").trim().slice(0, 24);
@@ -94,23 +117,24 @@ export async function submitScore(name, score, mode) {
     throw new Error("スコアが不正です。");
   }
 
-  const docData = {
+  const scoreData = {
     name: cleanedName,
     score: numericScore,
     mode: safeMode,
     createdAt: serverTimestamp(),
   };
-  
-  console.log("[submitScore] Sending to Firestore:", docData);
-  
-  const docRef = await addDoc(collection(db, "scores"), docData);
-  console.log("[submitScore] Success! Doc ID:", docRef.id);
+
+  console.log("[submitScore] Sending to Realtime DB:", scoreData);
+  const allRef = push(scoresRef());
+  const modeRef = push(scoresRef(safeMode));
+  await Promise.all([set(allRef, scoreData), set(modeRef, scoreData)]);
+  console.log("[submitScore] Success!");
 }
 
 /**
- * 送信後に呼ぶ。Firestore から最新データを再読み込み。
+ * 送信後に呼ぶ。Realtime Database から最新データを再読み込み。
  */
-export async function refreshRankingAfterSubmit() {
+export async function refreshRankingAfterSubmit(limitCount = 100) {
   console.log("[refreshRankingAfterSubmit] Reloading...");
-  return preloadRanking();
+  return preloadRanking(limitCount);
 }

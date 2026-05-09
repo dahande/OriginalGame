@@ -4,6 +4,7 @@ import { loadState, saveState } from "./storage.js";
 import { setSoundEnabled, unlockAudio, sfx, bgm, setVolume } from "./audio.js";
 import {
   preloadRanking,
+  listenRanking,
   getCachedRanking,
   optimisticUpdate,
   submitScore,
@@ -502,7 +503,7 @@ submitRankBtn.addEventListener("click", async () => {
     const cachedTop30 = getCachedRanking(30);
     renderRanking(cachedTop30);
 
-    // Firestore に送信
+    // Realtime Database に送信
     await submitScore(playerName, currentScore, currentMode);
     rankSubmitStatus.textContent = "✓ 送信完了しました！";
     submitRankBtn.disabled = false;
@@ -558,10 +559,6 @@ async function refreshHomeRanking() {
   }
 }
 
-// 不要になった（キャッシュから直接取得するようになったため）
-async function refreshRanking() {
-  // 以前の実装は削除
-}
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -600,12 +597,20 @@ console.log("[init] Preloading ranking...");
 preloadRanking()
   .then((data) => {
     console.log("[init] Ranking preloaded:", data.length, "entries");
-    // ホーム画面に TOP 10 を反映
     refreshHomeRanking();
   })
   .catch((err) => {
     console.error("[init] Preload ranking failed:", err);
   });
+
+// Realtime Database の変更を監視し、キャッシュと表示を自動更新
+listenRanking((data) => {
+  console.log("[init] Realtime ranking update:", data.length, "entries");
+  refreshHomeRanking();
+  if (!gameOverModal.hidden) {
+    renderRanking(getCachedRanking(30));
+  }
+});
 
 function lightenHex(hex, amt) { return mixHex(hex, "#ffffff", amt); }
 function darkenHex(hex, amt)  { return mixHex(hex, "#000000", amt); }
