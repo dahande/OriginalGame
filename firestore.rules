@@ -17,3 +17,25 @@ service cloud.firestore {
     }
   }
 }
+
+/*
+  Firebase インデックス設定：
+  
+  複合検索を行う場合は、以下のインデックスを Firebase Console で作成してください：
+  
+  1. mode（昇順） + score（降順）
+     Collection: scores
+     Fields:
+       - mode (Ascending)
+       - score (Descending)
+  
+  Firebase Console で作成方法：
+  1. https://console.firebase.google.com へアクセス
+  2. aomoriapple-48db3 プロジェクトを選択
+  3. Firestore Database → Indexes タブ
+  4. [複合インデックスを作成] をクリック
+  5. Collection: scores
+     Field 1: mode (Ascending)
+     Field 2: score (Descending)
+     を指定して作成
+*/

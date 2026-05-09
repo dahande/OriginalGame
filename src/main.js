@@ -2,7 +2,13 @@ import { World } from "./world.js";
 import { TIERS, MAX_TIER, pickDropTier, drawApple, setRenderDPR } from "./apple.js";
 import { loadState, saveState } from "./storage.js";
 import { setSoundEnabled, unlockAudio, sfx, bgm, setVolume } from "./audio.js";
-import { loadRanking, submitScore } from "../ranking.js";
+import {
+  preloadRanking,
+  getCachedRanking,
+  optimisticUpdate,
+  submitScore,
+  refreshRankingAfterSubmit,
+} from "../ranking.js";
 
 // Electron の IPC をチェック
 let ipcRenderer = null;
@@ -131,7 +137,10 @@ function ensureWorld() {
       }
       gameOverModal.hidden = false;
       sfx.gameOver();
-      refreshRanking().catch(() => {});
+      // キャッシュから即座にランキングを表示（Firestore アクセスなし）
+      const cachedTop30 = getCachedRanking(30);
+      renderRanking(cachedTop30);
+      rankingList.classList.remove("hidden");
       refreshHomeBests();
       // ドクロモード で 規定スコア未満 → ホラー演出
       if (m && m.horrorThreshold && s < m.horrorThreshold) {
@@ -196,6 +205,7 @@ function returnToMenu() {
   submitRankBtn.disabled = false;
   if (world) world.reset();
   refreshHomeBests();
+  // ホーム画面のランキングはキャッシュから表示
   refreshHomeRanking();
 }
 
@@ -479,15 +489,32 @@ submitRankBtn.addEventListener("click", async () => {
   rankSubmitStatus.textContent = "送信中...";
   submitRankBtn.disabled = true;
 
+  console.log("[submitRankBtn] Submitting score:", { playerName, currentScore, currentMode });
+
   try {
     if (!currentScore || currentScore <= 0) {
       throw new Error("スコアがありません。");
     }
+
+    // optimistic update: 送信前に UI に反映
+    console.log("[submitRankBtn] Optimistic update: adding to cache");
+    optimisticUpdate(playerName, currentScore, currentMode);
+    const cachedTop30 = getCachedRanking(30);
+    renderRanking(cachedTop30);
+
+    // Firestore に送信
     await submitScore(playerName, currentScore, currentMode);
-    rankSubmitStatus.textContent = "送信しました。ランキングを更新中です。";
+    rankSubmitStatus.textContent = "✓ 送信完了しました！";
     submitRankBtn.disabled = false;
-    refreshRanking().catch(() => {});
+
+    // 送信後だけ再同期（バックグラウンド）
+    console.log("[submitRankBtn] Refreshing ranking after submit...");
+    refreshRankingAfterSubmit().catch((err) => {
+      console.error("Ranking refresh error:", err);
+      rankSubmitStatus.textContent = "※ 最新化に失敗しましたが、スコアは送信されました。";
+    });
   } catch (error) {
+    console.error("[submitRankBtn] Error:", error);
     rankSubmitStatus.textContent = error.message || "送信に失敗しました。";
     submitRankBtn.disabled = false;
   }
@@ -516,34 +543,25 @@ async function renderRanking(list) {
   renderRankingEntries(list, rankingEntries);
 }
 
-async function refreshHomeRanking(mode = null, limitCount = 10) {
+async function refreshHomeRanking() {
   if (!homeRankingEntries) return;
-  homeRankingStatus.textContent = "ランキングを表示中...";
 
   try {
-    const entries = await loadRanking(mode, limitCount);
-    renderRankingEntries(entries, homeRankingEntries);
+    // キャッシュから TOP 10 を取得（Firestore アクセスなし）
+    const cachedTop10 = getCachedRanking(10);
+    renderRankingEntries(cachedTop10, homeRankingEntries);
     homeRankingStatus.textContent = "";
   } catch (error) {
-    homeRankingEntries.innerHTML = '<li class="ranking-empty">ランキングの読み込みに失敗しました。</li>';
-    homeRankingStatus.textContent = "読み込みに失敗しました。";
+    console.error("refreshHomeRanking error:", error);
+    renderRankingEntries([], homeRankingEntries);
+    homeRankingStatus.textContent = "※ 読み込み失敗";
   }
 }
 
+// 不要になった（キャッシュから直接取得するようになったため）
 async function refreshRanking() {
-  rankingList.classList.remove("hidden");
-  rankSubmitStatus.textContent = "ランキングを読み込み中...";
-
-  try {
-    const entries = await loadRanking(currentMode, 100);
-    renderRanking(entries);
-    rankSubmitStatus.textContent = "";
-  } catch (error) {
-    rankingEntries.innerHTML = '<li class="ranking-empty">ランキングの読み込みに失敗しました。</li>';
-    rankSubmitStatus.textContent = "ランキング取得に失敗しました。";
-  }
+  // 以前の実装は削除
 }
-
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -576,6 +594,18 @@ buildEvolutionList();
 refreshHomeBests();
 refreshHomeRanking();
 drawNext();
+
+// ゲーム起動時にランキングを先読み（バックグラウンド）
+console.log("[init] Preloading ranking...");
+preloadRanking()
+  .then((data) => {
+    console.log("[init] Ranking preloaded:", data.length, "entries");
+    // ホーム画面に TOP 10 を反映
+    refreshHomeRanking();
+  })
+  .catch((err) => {
+    console.error("[init] Preload ranking failed:", err);
+  });
 
 function lightenHex(hex, amt) { return mixHex(hex, "#ffffff", amt); }
 function darkenHex(hex, amt)  { return mixHex(hex, "#000000", amt); }

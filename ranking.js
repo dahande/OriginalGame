@@ -26,6 +26,62 @@ const db = getFirestore(app);
 const MAX_SCORE = 1000000;
 const ALLOWED_MODES = ["normal", "hard", "skull"];
 
+// メモリ保持用ランキング
+let cachedRanking = [];
+
+/**
+ * ゲーム起動時に呼ぶ。
+ * Firestore から TOP 100 を先読みしてメモリに保持。
+ */
+export async function preloadRanking() {
+  try {
+    const q = query(
+      collection(db, "scores"),
+      orderBy("score", "desc"),
+      limit(100)
+    );
+    const snap = await getDocs(q);
+    cachedRanking = snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    console.log("[preloadRanking] Loaded", cachedRanking.length, "entries");
+    return cachedRanking;
+  } catch (error) {
+    console.error("[preloadRanking] Error:", error);
+    cachedRanking = [];
+    return [];
+  }
+}
+
+/**
+ * キャッシュをそのまま返す。Firestore アクセスなし。
+ */
+export function getCachedRanking(limitCount = 100) {
+  return cachedRanking.slice(0, limitCount);
+}
+
+/**
+ * optimistic update: 送信前に UI に反映させる
+ */
+export function optimisticUpdate(name, score, mode) {
+  const safeMode = ALLOWED_MODES.includes(mode) ? mode : "normal";
+  cachedRanking.unshift({
+    name,
+    score,
+    mode: safeMode,
+    createdAt: new Date(),
+  });
+  // 101件目以降は削除して最新 100 件のみ保持
+  if (cachedRanking.length > 100) {
+    cachedRanking = cachedRanking.slice(0, 100);
+  }
+  console.log("[optimisticUpdate] Added to cache, now", cachedRanking.length, "entries");
+}
+
+/**
+ * Firestore に送信。
+ */
 export async function submitScore(name, score, mode) {
   const cleanedName = String(name || "").trim().slice(0, 24);
   const numericScore = Number(score) || 0;
@@ -38,27 +94,23 @@ export async function submitScore(name, score, mode) {
     throw new Error("スコアが不正です。");
   }
 
-  await addDoc(collection(db, "scores"), {
+  const docData = {
     name: cleanedName,
     score: numericScore,
     mode: safeMode,
     createdAt: serverTimestamp(),
-  });
+  };
+  
+  console.log("[submitScore] Sending to Firestore:", docData);
+  
+  const docRef = await addDoc(collection(db, "scores"), docData);
+  console.log("[submitScore] Success! Doc ID:", docRef.id);
 }
 
-export async function loadRanking(mode = null, limitCount = 100) {
-  const clauses = [];
-  if (mode && ALLOWED_MODES.includes(mode)) {
-    clauses.push(where("mode", "==", mode));
-  }
-  clauses.push(orderBy("score", "desc"));
-  clauses.push(limit(limitCount));
-
-  const q = query(collection(db, "scores"), ...clauses);
-  const snap = await getDocs(q);
-
-  return snap.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+/**
+ * 送信後に呼ぶ。Firestore から最新データを再読み込み。
+ */
+export async function refreshRankingAfterSubmit() {
+  console.log("[refreshRankingAfterSubmit] Reloading...");
+  return preloadRanking();
 }
