@@ -41,8 +41,9 @@ body {
   max-width: 920px;
   margin: 0 auto;
   padding: 12px 14px 24px;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto 1fr auto;
   gap: 14px;
   min-height: calc(100vh - var(--safe-top) - var(--safe-bottom));
   min-height: calc(100dvh - var(--safe-top) - var(--safe-bottom));
@@ -53,13 +54,19 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+  grid-column: 1;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.topbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .brand-icon {
@@ -95,6 +102,8 @@ body {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  justify-content: center;
+  grid-column: 1;
 }
 
 .hud-cell {
@@ -170,6 +179,7 @@ body {
   justify-content: center;
   flex: 1;
   min-height: 0;
+  grid-column: 1;
 }
 
 .play-wrap {
@@ -202,8 +212,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: calc(100vh - 200px);
-  max-height: calc(100dvh - 200px);
+  max-height: 100%;
   overflow: hidden;
 }
 
@@ -292,6 +301,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  grid-column: 1;
 }
 
 .footer .credit {
@@ -910,8 +920,30 @@ body {
 }
 
 @media (max-width: 640px) {
-  .app { padding: 8px 10px 16px; gap: 8px; }
-  .topbar { gap: 8px; }
+  .app {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 10px 16px;
+    gap: 8px;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .topbar-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+  }
+  .hud {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
   .brand-icon { font-size: 26px; }
   .brand-jp { font-size: 18px; }
   .brand-en { font-size: 9px; letter-spacing: 0.22em; }
@@ -927,7 +959,7 @@ body {
   .evo-row { gap: 6px; padding: 2px 4px; font-size: 11px; }
   .evo-name { font-size: 11px; }
   .evo-dot { width: 14px; height: 14px; flex-basis: 14px; }
-    .overlay-home {
+  .overlay-home {
     align-items: flex-start;
     padding-top: 24px;
     padding-bottom: 24px;
