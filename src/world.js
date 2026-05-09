@@ -23,6 +23,7 @@ export class World {
     this.bestTierReached = 0;
     this.gameOver = false;
     this.shake = 0;
+    this.scoreMultiplier = opts.scoreMultiplier || 1;
     this.onScore = opts.onScore || (() => {});
     this.onGameOver = opts.onGameOver || (() => {});
     this.onMerge = opts.onMerge || (() => {});
@@ -185,7 +186,7 @@ export class World {
           dangerTime: 0,
         });
 
-        const earned = TIERS[newTier].score;
+        const earned = Math.round(TIERS[newTier].score * this.scoreMultiplier);
         this.score += earned;
         if (newTier > this.bestTierReached) {
           this.bestTierReached = newTier;

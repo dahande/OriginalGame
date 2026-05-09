@@ -44,7 +44,7 @@ const MODES = {
   normal: { name: "ふつう", dropLimit: Infinity, bestKey: "bestNormal" },
   hard:   { name: "ハード", dropLimit: 1.5,      bestKey: "bestHard"   },
   skull:  { name: "ドクロ", dropLimit: 1.0,      bestKey: "bestSkull",
-            horrorThreshold: 3000 },
+            horrorThreshold: 3000, scoreMultiplier: 1.5 },
 };
 
 const DROP_COOLDOWN = 0.45;
@@ -134,7 +134,9 @@ function ensureWorld() {
     onGameOver: (s) => {
       finalScoreEl.textContent = s;
       const m = MODES[currentMode];
-      currentModeName.textContent = m ? m.name : "ふつう";
+      currentModeName.textContent = m
+    ? `${m.name}${m.scoreMultiplier && m.scoreMultiplier !== 1 ? ` (${m.scoreMultiplier}倍)` : ""}`
+    : "ふつう";
       bestTierName.textContent = TIERS[world.bestTierReached].name;
       const modeBest = m ? state[m.bestKey] || 0 : state.best;
       if (s > 0 && s >= modeBest) {
@@ -198,6 +200,9 @@ function startMode(modeKey) {
     ipcRenderer.send('set-system-volume', 50);
   }
 
+  if (world) {
+    world.scoreMultiplier = m.scoreMultiplier || 1;
+  }
   if (!loopStarted) {
     loopStarted = true;
     lastFrame = performance.now();
