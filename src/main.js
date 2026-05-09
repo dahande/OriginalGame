@@ -23,9 +23,15 @@ if (typeof window.require === "function") {
 }
 
 let deferredInstallPrompt = null;
-// PWA インストールを無効化するため Service Worker を登録しない
 
-// PWA インストールを無効化するため beforeinstallprompt を無視
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const installPrompt = document.getElementById('installPrompt');
+  if (installPrompt) {
+    installPrompt.hidden = false;
+  }
+});
 
 const $ = (id) => document.getElementById(id);
 
@@ -646,6 +652,35 @@ document.addEventListener("click", (e) => {
     gameMenu.hidden = true;
     hamburgerBtn.setAttribute("aria-expanded", "false");
   }
+});
+
+// PWAインストールボタンの処理
+const installBtn = $("installBtn");
+const installPrompt = $("installPrompt");
+
+if (installBtn) {
+  installBtn.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) {
+      return;
+    }
+
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    console.log(`ユーザーの応答: ${outcome}`);
+
+    deferredInstallPrompt = null;
+    if (installPrompt) {
+      installPrompt.hidden = true;
+    }
+  });
+}
+
+window.addEventListener("appinstalled", () => {
+  console.log("PWA がインストールされました");
+  if (installPrompt) {
+    installPrompt.hidden = true;
+  }
+  deferredInstallPrompt = null;
 });
 
 document.addEventListener("visibilitychange", () => {
