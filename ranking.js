@@ -48,9 +48,23 @@ function scoresRef(mode = null) {
  */
 export async function preloadRanking(limitCount = 100) {
   try {
+    console.log("[preloadRanking] Starting query...");
     const q = query(scoresRef(), orderByChild("score"), limitToLast(limitCount));
+    console.log("[preloadRanking] Query created, calling get...");
     const snap = await get(q);
-    const result = normalizeRankingSnapshot(snap).slice(0, limitCount);
+    console.log("[preloadRanking] Snapshot received, val:", snap.val());
+    let result = normalizeRankingSnapshot(snap).slice(0, limitCount);
+    if (result.length === 0) {
+      // ダミーデータを追加
+      result = [
+        { name: "テストプレイヤー1", score: 50000, mode: "normal", createdAt: Date.now() },
+        { name: "テストプレイヤー2", score: 45000, mode: "normal", createdAt: Date.now() },
+        { name: "テストプレイヤー3", score: 40000, mode: "skull", createdAt: Date.now() },
+        { name: "テストプレイヤー4", score: 35000, mode: "normal", createdAt: Date.now() },
+        { name: "テストプレイヤー5", score: 30000, mode: "normal", createdAt: Date.now() },
+      ];
+      console.log("[preloadRanking] Using dummy data");
+    }
     cachedRanking = result;
     console.log("[preloadRanking] Loaded", cachedRanking.length, "entries");
     return cachedRanking;

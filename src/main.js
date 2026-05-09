@@ -547,14 +547,19 @@ async function renderRanking(list) {
 async function loadHomeRanking(limitCount = 10) {
   if (!homeRankingEntries) return;
 
+  console.log("[loadHomeRanking] Starting...");
   homeRankingStatus.textContent = "読み込み中...";
   homeRankingEntries.innerHTML = "";
 
   try {
+    console.log("[loadHomeRanking] Calling preloadRanking...");
     await preloadRanking(100);
+    console.log("[loadHomeRanking] preloadRanking done, cachedRanking length:", getCachedRanking().length);
     const cachedTop10 = getCachedRanking(limitCount);
+    console.log("[loadHomeRanking] cachedTop10:", cachedTop10);
     renderRankingEntries(cachedTop10, homeRankingEntries);
     homeRankingStatus.textContent = cachedTop10.length ? "" : "ランキングデータはありません。";
+    console.log("[loadHomeRanking] Status set to:", homeRankingStatus.textContent);
   } catch (error) {
     console.error("loadHomeRanking error:", error);
     renderRankingEntries([], homeRankingEntries);
@@ -603,7 +608,11 @@ refreshHomeBests();
 drawNext();
 
 // ページを開いた瞬間にホームランキングを読み込む
-loadHomeRanking();
+if (document.readyState === "loading") {
+  window.addEventListener("DOMContentLoaded", () => loadHomeRanking());
+} else {
+  loadHomeRanking();
+}
 
 // Realtime Database の変更を監視し、キャッシュと表示を自動更新
 listenRanking((data) => {
