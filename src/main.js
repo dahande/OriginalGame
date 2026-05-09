@@ -544,19 +544,30 @@ async function renderRanking(list) {
   renderRankingEntries(list, rankingEntries);
 }
 
-async function refreshHomeRanking() {
+async function loadHomeRanking(limitCount = 10) {
   if (!homeRankingEntries) return;
 
+  homeRankingStatus.textContent = "読み込み中...";
+  homeRankingEntries.innerHTML = "";
+
   try {
-    // キャッシュから TOP 10 を取得（Firestore アクセスなし）
-    const cachedTop10 = getCachedRanking(10);
+    await preloadRanking(100);
+    const cachedTop10 = getCachedRanking(limitCount);
     renderRankingEntries(cachedTop10, homeRankingEntries);
-    homeRankingStatus.textContent = "";
+    homeRankingStatus.textContent = cachedTop10.length ? "" : "ランキングデータはありません。";
   } catch (error) {
-    console.error("refreshHomeRanking error:", error);
+    console.error("loadHomeRanking error:", error);
     renderRankingEntries([], homeRankingEntries);
-    homeRankingStatus.textContent = "※ 読み込み失敗";
+    homeRankingStatus.textContent = "ランキングデータの読み込みに失敗しました。";
   }
+}
+
+function refreshHomeRanking(limitCount = 10) {
+  if (!homeRankingEntries) return;
+
+  const cachedTop10 = getCachedRanking(limitCount);
+  renderRankingEntries(cachedTop10, homeRankingEntries);
+  homeRankingStatus.textContent = cachedTop10.length ? "" : "ランキングデータはありません。";
 }
 
 function escapeHtml(value) {
@@ -589,19 +600,17 @@ bgm.setEnabled(state.sound);
 soundBtn.classList.toggle("muted", !state.sound);
 buildEvolutionList();
 refreshHomeBests();
-refreshHomeRanking();
 drawNext();
 
-// ゲーム起動時にランキングを先読み（バックグラウンド）
-console.log("[init] Preloading ranking...");
-preloadRanking()
-  .then((data) => {
-    console.log("[init] Ranking preloaded:", data.length, "entries");
-    refreshHomeRanking();
-  })
-  .catch((err) => {
-    console.error("[init] Preload ranking failed:", err);
-  });
+function initHomeRanking() {
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", () => loadHomeRanking());
+  } else {
+    loadHomeRanking();
+  }
+}
+
+initHomeRanking();
 
 // Realtime Database の変更を監視し、キャッシュと表示を自動更新
 listenRanking((data) => {
