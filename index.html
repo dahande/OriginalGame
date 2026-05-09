@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-BTYX46BPY3"></script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-C9RC8XG8BZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'G-BTYX46BPY3');
+    gtag('config', 'G-C9RC8XG8BZ');
   </script>
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
@@ -48,7 +48,7 @@
 
   <!-- Discord は Open Graph を 主に 使うため 上記で 対応 -->
   <meta name="theme-color" content="#c0271e" />
-
+  <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="src/styles.css" />
   <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='55' r='40' fill='%23c0271e'/><rect x='47' y='13' width='6' height='14' fill='%235a3a1a'/><ellipse cx='62' cy='18' rx='12' ry='5' transform='rotate(-25 62 18)' fill='%233f8c3f'/></svg>" />
 
@@ -145,6 +145,20 @@
       <p class="record" id="recordLine"></p>
       <p class="mode-line">モード: <span id="currentModeName">ふつう</span></p>
       <p class="best-tier-line">最高到達: <span id="bestTierName">紅玉</span></p>
+      <div class="ranking-panel">
+        <label class="ranking-field">
+          <span>ランキング名</span>
+          <input id="playerNameInput" type="text" maxlength="24" placeholder="ニックネームを入力" autocomplete="name" />
+        </label>
+        <div class="ranking-actions">
+          <button class="btn btn-primary" id="submitRankBtn" type="button">ランキング送信</button>
+          <span class="ranking-status" id="rankSubmitStatus"></span>
+        </div>
+        <div class="ranking-list" id="rankingList" aria-live="polite">
+          <div class="ranking-caption">TOP 100</div>
+          <ol id="rankingEntries"></ol>
+        </div>
+      </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" id="menuBtn">メニュー</button>
         <button class="btn btn-primary" id="restartBtn">もう一度</button>
@@ -208,6 +222,7 @@
     <div class="horror-tap-hint" aria-hidden="true">タップ / ESC で 戻る</div>
   </div>
 
+  <script type="module" src="./ranking.js"></script>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

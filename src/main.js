@@ -1,7 +1,24 @@
 import { World } from "./world.js";
 import { TIERS, MAX_TIER, pickDropTier, drawApple, setRenderDPR } from "./apple.js";
 import { loadState, saveState } from "./storage.js";
-import { setSoundEnabled, unlockAudio, sfx, bgm } from "./audio.js";
+import { setSoundEnabled, unlockAudio, sfx, bgm, setVolume } from "./audio.js";
+import { loadRanking, submitScore } from "../ranking.js";
+
+// Electron の IPC をチェック
+let ipcRenderer = null;
+if (typeof window.require === "function") {
+  try {
+    const electron = window.require("electron");
+    ipcRenderer = electron && electron.ipcRenderer ? electron.ipcRenderer : null;
+  } catch (error) {
+    ipcRenderer = null;
+  }
+}
+
+let deferredInstallPrompt = null;
+// PWA インストールを無効化するため Service Worker を登録しない
+
+// PWA インストールを無効化するため beforeinstallprompt を無視
 
 const $ = (id) => document.getElementById(id);
 
@@ -40,6 +57,11 @@ const popLayer = $("popLayer");
 const bestNormalLabel = $("bestNormalLabel");
 const bestHardLabel = $("bestHardLabel");
 const bestSkullLabel = $("bestSkullLabel");
+const playerNameInput = $("playerNameInput");
+const submitRankBtn = $("submitRankBtn");
+const rankSubmitStatus = $("rankSubmitStatus");
+const rankingEntries = $("rankingEntries");
+const rankingList = $("rankingList");
 const horrorOverlay = $("horrorOverlay");
 const horrorCloseBtn = $("horrorCloseBtn");
 const horrorScore = $("horrorScore");
@@ -124,6 +146,7 @@ function startMode(modeKey) {
   currentMode = modeKey;
   unlockAudio();
   bgm.start();
+  setVolume(0.5);
 
   // キャンバスは 全モード 共通サイズ ( 旧ハード )
   canvas.style.aspectRatio = `${BOX_W} / ${BOX_H}`;
@@ -141,12 +164,19 @@ function startMode(modeKey) {
   gameOverModal.hidden = true;
   closeHorror();
   scoreEl.textContent = "0";
+  rankSubmitStatus.textContent = "";
+  submitRankBtn.disabled = false;
+  playerNameInput.value = "";
 
   nextTier = pickDropTier();
   pendingTier = pickDropTier();
   dropCooldown = 0;
   dropTimer = m.dropLimit;
   drawNext();
+
+  if (ipcRenderer) {
+    ipcRenderer.send('set-system-volume', 50);
+  }
 
   if (!loopStarted) {
     loopStarted = true;
@@ -159,6 +189,8 @@ function returnToMenu() {
   gameOverModal.hidden = true;
   closeHorror();
   homeOverlay.hidden = false;
+  rankSubmitStatus.textContent = "";
+  submitRankBtn.disabled = false;
   if (world) world.reset();
   refreshHomeBests();
 }
@@ -436,6 +468,67 @@ soundBtn.addEventListener("click", () => {
   }
   soundBtn.classList.toggle("muted", !state.sound);
 });
+
+submitRankBtn.addEventListener("click", async () => {
+  const currentScore = world ? world.score : 0;
+  const playerName = playerNameInput.value.trim();
+  rankSubmitStatus.textContent = "送信中...";
+  submitRankBtn.disabled = true;
+
+  try {
+    if (!currentScore || currentScore <= 0) {
+      throw new Error("スコアがありません。");
+    }
+    await submitScore(playerName, currentScore, currentMode);
+    rankSubmitStatus.textContent = "送信しました。TOP 100 を更新中です。";
+    await refreshRanking();
+  } catch (error) {
+    rankSubmitStatus.textContent = error.message || "送信に失敗しました。";
+    submitRankBtn.disabled = false;
+  }
+});
+
+async function renderRanking(list) {
+  rankingEntries.innerHTML = "";
+  if (!list || list.length === 0) {
+    rankingEntries.innerHTML = '<li class="ranking-empty">ランキングデータがありません。</li>';
+    return;
+  }
+
+  list.forEach((entry, index) => {
+    const li = document.createElement("li");
+    li.className = "ranking-entry";
+    li.innerHTML = `
+      <span class="ranking-pos">${index + 1}</span>
+      <span class="ranking-name">${escapeHtml(entry.name)}</span>
+      <span class="ranking-score">${entry.score}</span>
+    `;
+    rankingEntries.appendChild(li);
+  });
+}
+
+async function refreshRanking() {
+  rankingList.classList.remove("hidden");
+  rankSubmitStatus.textContent = "ランキングを読み込み中...";
+
+  try {
+    const entries = await loadRanking(currentMode, 100);
+    renderRanking(entries);
+    rankSubmitStatus.textContent = "";
+  } catch (error) {
+    rankingEntries.innerHTML = '<li class="ranking-empty">ランキングの読み込みに失敗しました。</li>';
+    rankSubmitStatus.textContent = "ランキング取得に失敗しました。";
+  }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {

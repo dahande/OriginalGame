@@ -1,0 +1,17 @@
+{
+  "name": "青森Apple",
+  "short_name": "青森Apple",
+  "description": "青森のりんご合体パズルゲーム",
+  "start_url": ".",
+  "scope": ".",
+  "display": "browser",
+  "background_color": "#fde7c2",
+  "theme_color": "#c0271e",
+  "icons": [
+    {
+      "src": "og-image.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

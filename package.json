@@ -1,0 +1,39 @@
+{
+  "name": "original-game",
+  "version": "1.0.0",
+  "description": "Original Game with volume control",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^24.8.0"
+  },
+  "dependencies": {
+    "loudness": "^0.4.1"
+  },
+  "build": {
+    "appId": "jp.dahande.aomori-apple",
+    "productName": "Aomori Apple",
+    "files": [
+      "**/*",
+      "!node_modules/**/*.{md,markdown,txt}"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Game"
+    },
+    "win": {
+      "target": ["nsis"]
+    },
+    "mac": {
+      "target": ["dmg"]
+    }
+  }
+}

@@ -62,6 +62,10 @@ export function setSoundEnabled(v) {
   if (masterGain) masterGain.gain.value = enabled ? 0.55 : 0;
 }
 
+export function setVolume(vol) {
+  if (masterGain) masterGain.gain.value = vol;
+}
+
 // 単純な ベース ビープ ( 短い 効果音 )
 function envBeep({ freq = 440, type = "sine", dur = 0.15, vol = 0.3, slide = 0, delay = 0, attack = 0.005 }) {
   if (!enabled) return;

@@ -387,6 +387,105 @@ body {
   color: var(--ink-dim);
 }
 
+.ranking-panel {
+  margin: 16px 0 0;
+  text-align: left;
+}
+
+.ranking-field {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--ink-dim);
+}
+
+.ranking-field span {
+  font-weight: 700;
+}
+
+.ranking-field input {
+  width: 100%;
+  border: 1px solid rgba(120, 70, 30, 0.22);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 16px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.ranking-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.ranking-status {
+  flex: 1;
+  font-size: 13px;
+  color: var(--ink-dim);
+  min-height: 20px;
+}
+
+.ranking-list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 12px 12px 10px;
+  border: 1px solid rgba(120, 70, 30, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.ranking-caption {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--apple-red);
+  margin-bottom: 10px;
+}
+
+.ranking-entry {
+  display: grid;
+  grid-template-columns: 32px 1fr 80px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid rgba(120, 70, 30, 0.08);
+}
+
+.ranking-entry:first-child {
+  border-top: none;
+}
+
+.ranking-pos {
+  font-weight: 800;
+  color: var(--apple-deep);
+}
+
+.ranking-name {
+  font-size: 14px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-score {
+  font-size: 14px;
+  font-weight: 800;
+  text-align: right;
+  color: var(--ink);
+}
+
+.ranking-empty {
+  padding: 12px 0;
+  color: var(--ink-dim);
+  font-size: 13px;
+  text-align: center;
+}
+
 .btn {
   display: inline-block;
   border: none;
