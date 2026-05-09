@@ -564,6 +564,8 @@ body {
 
 .home-headings { text-align: left; }
 
+.home-title-break { display: none; }
+
 .home-title {
   font-size: 36px;
   font-weight: 900;
@@ -986,8 +988,18 @@ body {
   .home-panel {
     width: 100%;
   }
+  .home-title-row {
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+  .home-emoji {
+    margin-top: 4px;
+  }
+  .home-title-break {
+    display: inline;
+  }
   .home-title {
-    max-width: 110px;
+    max-width: calc(100% - 72px);
     word-break: break-word;
   }
 }

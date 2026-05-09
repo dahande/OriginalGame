@@ -113,7 +113,7 @@ npx serve -l 8080 .
 検索結果に 表示されやすく する 仕掛け :
 
 - `<title>` / `meta description` / `meta keywords` で キーワード網羅
-  ( 青森りんご, スイカゲーム, 落ちものパズル, ふじ, 世界一, 王林, ... )
+  ( 青森りんご, りんごゲーム, 落ちものパズル, ふじ, 世界一, 王林, ... )
 - **Open Graph** / **Twitter Card** で SNS 共有時の リッチプレビュー
   対応 ( 1200×630 の `og-image.png` 同梱 )
 - **JSON-LD** で `VideoGame` 構造化データ ( 名前 / 説明 / 言語 /
