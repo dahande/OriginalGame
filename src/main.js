@@ -718,6 +718,33 @@ if (document.readyState === "loading") {
   loadHomeRanking();
 }
 
+// ページを開いたときに BGM の自動再生を試みる。
+// ブラウザの自動再生ポリシーで拒否される場合は、最初のユーザー操作で開始するフォールバックを用意する。
+function tryAutoStartBgm() {
+  if (!state.sound) return;
+  try {
+    unlockAudio();
+  } catch (e) { /* noop */ }
+  try {
+    bgm.start();
+    setVolume(0.5);
+  } catch (e) { /* noop */ }
+
+  // 自動再生がブロックされた場合、最初のユーザー操作で解除して再生する
+  const startOnGesture = () => {
+    try { unlockAudio(); } catch (e) {}
+    try { bgm.start(); setVolume(0.5); } catch (e) {}
+    document.removeEventListener('pointerdown', startOnGesture);
+    document.removeEventListener('click', startOnGesture);
+    document.removeEventListener('keydown', startOnGesture);
+  };
+  document.addEventListener('pointerdown', startOnGesture, { passive: true });
+  document.addEventListener('click', startOnGesture, { passive: true });
+  document.addEventListener('keydown', startOnGesture, { passive: true });
+}
+
+tryAutoStartBgm();
+
 // Realtime Database の変更を監視し、キャッシュと表示を自動更新
 listenRanking((data) => {
   console.log("[init] Realtime ranking update:", data.length, "entries");

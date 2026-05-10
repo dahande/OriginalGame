@@ -348,6 +348,21 @@ body {
   animation: panelIn 0.4s cubic-bezier(0.2, 1, 0.3, 1);
 }
 
+/* Game over modal (スマホ向け): 内容が縦に長いときにスクロールさせる */
+#gameOverModal {
+  align-items: flex-start;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+#gameOverModal .panel {
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+}
+
 @keyframes panelIn {
   from { transform: translateY(12px) scale(0.96); opacity: 0; }
   to { transform: none; opacity: 1; }
